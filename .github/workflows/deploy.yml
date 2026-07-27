@@ -1,0 +1,27 @@
+name: Deploy server
+
+# Deploys to Fly on every push to main once the FLY_API_TOKEN repo secret
+# exists (create with: fly tokens create deploy -a boot-sale-buddy-api).
+# Until then this workflow simply skips.
+on:
+  push:
+    branches: [main]
+    paths: ["server/**", ".github/workflows/deploy.yml"]
+
+concurrency:
+  group: deploy-server
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ vars.FLY_DEPLOY_ENABLED == 'true' }}
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - run: flyctl deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

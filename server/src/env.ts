@@ -27,6 +27,14 @@ const base = z.object({
   // eBay Browse API — client-credentials OAuth, EBAY_GB marketplace.
   EBAY_CLIENT_ID: z.string().optional(),
   EBAY_CLIENT_SECRET: z.string().optional(),
+  EBAY_ENV: z.enum(["production", "sandbox"]).default("production"),
+
+  // Sign in with Apple token verification (audience check).
+  APPLE_BUNDLE_ID: z.string().default("com.bootsalebuddy.app"),
+
+  // Dev-only: serve canned vision/eBay responses so the full scan flow can
+  // be exercised locally with zero third-party keys. Ignored in production.
+  DEV_FAKE_UPSTREAMS: z.string().optional(),
 
   // RevenueCat webhook Authorization header value (configured in RC dashboard).
   REVENUECAT_WEBHOOK_AUTH: z.string().optional(),

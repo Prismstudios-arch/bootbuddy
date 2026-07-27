@@ -27,5 +27,9 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 
+# Local dev database (PGlite) and curl scratch
+server/.data/
+server/session.json
+
 # Local scratch
 dsfn

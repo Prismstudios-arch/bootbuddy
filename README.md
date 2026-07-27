@@ -33,16 +33,46 @@ npm run typecheck
 npm run lint
 ```
 
-**Server:**
+**Server** (zero setup — no Docker, no local Postgres):
 
 ```sh
 cd server
 npm install
-cp .env.example .env   # fill in what you have; /healthz works with none of it
+cp .env.example .env   # only JWT_SECRET is needed to try the API locally
 npm run dev            # http://localhost:8080/healthz
 npm test
 npm run typecheck
 ```
+
+With no `DATABASE_URL` the server runs on PGlite — real Postgres compiled to
+WASM, persisted to `server/.data/` — with migrations applied automatically.
+Set `DEV_FAKE_UPSTREAMS=1` to exercise the full scan flow with canned
+Claude/eBay responses and zero API keys:
+
+```sh
+curl -s -X POST localhost:8080/v1/auth/anonymous          # → tokens
+curl -s localhost:8080/v1/me -H "authorization: Bearer $TOKEN"
+curl -s -X POST localhost:8080/v1/scan \
+  -H "authorization: Bearer $TOKEN" -H "content-type: application/json" \
+  -d '{"imageBase64":"<base64 jpeg>"}'                     # → identification + prices + quota
+```
+
+**Deploying to Fly** (first time):
+
+```sh
+cd server
+fly launch --no-deploy          # accept the existing fly.toml
+fly postgres create             # or use Neon; either way:
+fly secrets set DATABASE_URL=... JWT_SECRET=$(openssl rand -base64 48) \
+  ANTHROPIC_API_KEY=sk-ant-... EBAY_CLIENT_ID=... EBAY_CLIENT_SECRET=... \
+  REVENUECAT_WEBHOOK_AUTH=$(openssl rand -hex 24)
+fly deploy                      # release_command runs migrations first
+fly scale count 2               # zero-downtime rolling deploys
+```
+
+Continuous deploys: set repo variable `FLY_DEPLOY_ENABLED=true` and secret
+`FLY_API_TOKEN` (from `fly tokens create deploy`) — see
+`.github/workflows/deploy.yml`.
 
 ## Honest constraints (design around these, don't hide them)
 
@@ -78,7 +108,7 @@ npm run typecheck
 ## Build order
 
 1. ✅ **Foundation** — repo, design tokens, themed tab shell, server skeleton, CI
-2. **Backend core** — Fly deploy, Postgres migrations, anonymous auth, `/v1/scan` end-to-end (curl-tested before any UI)
+2. ✅ **Backend core** — auth (anonymous + refresh rotation + Apple), quota-gated `/v1/scan` with Claude vision + eBay Browse, migrations, deploy pipeline (curl-tested; `fly deploy` awaits real credentials)
 3. **Scan flow** — camera → compress (≤1024px, ~70% JPEG) → upload → Result Sheet with count-up reveal + all five UI states
 4. **Portfolio + Profit** — finds CRUD, sold flow, stats, charts, share card
 5. **Monetization** — quotas, paywall, MockPurchases/RevenueCat behind one interface, webhook
