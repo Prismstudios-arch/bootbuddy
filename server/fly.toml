@@ -1,0 +1,25 @@
+# fly launch will ask to overwrite this — keep it; it encodes the ops
+# decisions from the brief (2 machines for zero-downtime, health checks).
+app = "boot-sale-buddy-api"
+primary_region = "lhr"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "off"   # autoscale off initially, per ops checklist
+  auto_start_machines = true
+  min_machines_running = 2     # zero-downtime rolling deploys
+
+  [[http_service.checks]]
+    interval = "15s"
+    timeout = "3s"
+    grace_period = "10s"
+    method = "GET"
+    path = "/healthz"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

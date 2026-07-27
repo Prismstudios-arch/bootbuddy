@@ -1,0 +1,38 @@
+# Boot Sale Buddy — working notes for Claude
+
+Premium iOS app for UK resellers: scan an item at a car boot sale, see live
+eBay asking prices, log buys/sales, track flip profit. Two independent npm
+packages: `app/` (Expo SDK 57, expo-router, TypeScript strict) and `server/`
+(Node 22, Hono, Drizzle/Postgres, deployed to Fly.io).
+
+## Hard rules
+
+- **Money is integer pence everywhere.** Server: `Pence` branded type in
+  `server/src/lib/money.ts`. Columns end `_pence`. Never floats for money.
+- **No third-party API key ever ships in the app.** Anthropic + eBay calls
+  happen only on the server. App talks to our API with its own JWT.
+- **Never claim "sold prices".** eBay Browse returns *active* listings; all
+  UI copy says "asking prices on eBay right now".
+- **Components import `useTheme()`, never the raw palette.** All text goes
+  through `app/src/components/type.tsx` (`<Type>`); spacing/radius come from
+  `app/src/design/tokens.ts`. Naked style numbers are a review flag.
+- **Copy is en-GB, short, cheeky.** "Couldn't reach the shops. Try again?" —
+  never "An error has occurred". It's "colour" and "£".
+- **Every screen ships five states:** loading (skeleton shimmer, no
+  spinners), empty (designed, with CTA), error (human copy + retry), offline
+  (cached data + banner), success.
+- **Quotas are decided server-side.** Client-side `isPro` is UX sugar only.
+- **Must keep running in Expo Go.** Anything needing native modules
+  (RevenueCat, Sentry native) hides behind an interface with an Expo Go mock.
+
+## Commands
+
+- App: `cd app && npm start | npm run typecheck | npm run lint`
+- Server: `cd server && npm run dev | npm test | npm run typecheck`
+- Migrations: `cd server && npm run db:generate && npm run db:migrate`
+
+## Environment
+
+- Server config enters only through `server/src/env.ts` (zod-validated;
+  strict in production, lenient in dev). Add new vars there + `.env.example`.
+- Vision model is `ANTHROPIC_MODEL` (default `claude-haiku-4-5`).

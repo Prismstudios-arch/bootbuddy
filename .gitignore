@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+
+# Secrets — never committed; commit .env.example only
+.env
+.env.*
+!.env.example
+
+# Build output
+dist/
+build/
+coverage/
+
+# Expo
+.expo/
+expo-env.d.ts
+app/ios/
+app/android/
+*.orig.*
+web-build/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.log
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Local scratch
+dsfn
