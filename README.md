@@ -27,6 +27,16 @@ hoisting) so Metro stays simple and the server image stays small.
 
 ## Running it
 
+From the project root (works in PowerShell — no `&&` needed):
+
+```sh
+npm run app         # Expo dev server; scan the QR with Expo Go
+npm run server      # API on localhost:8080
+npm test            # server test suite
+npm run typecheck   # both packages
+npm run deploy      # fly deploy
+```
+
 **App** (needs the Expo Go app on your phone):
 
 ```sh
@@ -36,6 +46,14 @@ npm start          # scan the QR with Expo Go
 npm run typecheck
 npm run lint
 ```
+
+> **Expo SDK 54 — pinned deliberately.** Expo Go only runs the SDK it was
+> built for, and the target phone here has the SDK 54 build. Upgrading the
+> project past 54 will make the QR code fail to load on that device with a
+> version-mismatch error. Before shipping, move to the current SDK and test
+> in a dev build rather than Expo Go (`npx expo install expo@latest &&
+> npx expo install --fix`). Note `expo-sharing` has no config plugin on 54,
+> so it must stay out of `app.json` → `plugins` while we're on this SDK.
 
 The app talks to the deployed API by default. To develop against a local
 server, override it — on a real device use your machine's LAN IP, because
@@ -122,9 +140,9 @@ claiming an entitlement is never trusted.
 
 ## Decisions that differ from the original brief (and why)
 
-- **Expo SDK 57, not 54.** The Expo Go app in the stores only runs the
-  latest SDK; pinning 54 in mid-2026 would break the harder requirement
-  ("must run in Expo Go").
+- **Expo SDK 54 (was 57).** Pinned back to match the SDK 54 Expo Go build
+  on the test device — "must run in Expo Go" beats "newest SDK". Revisit
+  at ship time, when a dev build replaces Expo Go anyway.
 - **Node 22 LTS, not 20.** Node 20 reached end-of-life April 2026; an EOL
   runtime fails the brief's own security checklist.
 - **Space Grotesk, not Clash Display.** OFL licence — unambiguous for app

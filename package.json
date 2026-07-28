@@ -1,0 +1,14 @@
+{
+  "name": "boot-sale-buddy",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Scan it. Price it. Flip it.",
+  "scripts": {
+    "app": "npm start --prefix app",
+    "server": "npm run dev --prefix server",
+    "test": "npm test --prefix server",
+    "typecheck": "npm run typecheck --prefix app && npm run typecheck --prefix server",
+    "lint": "npm run lint --prefix app",
+    "deploy": "npm run deploy --prefix server"
+  }
+}
