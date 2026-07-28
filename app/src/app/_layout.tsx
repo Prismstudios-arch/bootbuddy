@@ -9,8 +9,10 @@ import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { Onboarding } from "@/components/onboarding";
 import { ThemeProvider, useTheme } from "@/design/theme";
 import { queryClient } from "@/lib/query-client";
+import { useAppStore } from "@/state/app-store";
 
 // Splash stays up until fonts are ready — no flash of fallback type.
 SplashScreen.preventAutoHideAsync();
@@ -44,15 +46,25 @@ export default function RootLayout() {
 
 function ThemedShell() {
   const theme = useTheme();
+  const hasOnboarded = useAppStore((s) => s.hasOnboarded);
+
   return (
     <>
       <StatusBar style={theme.scheme === "dark" ? "light" : "dark"} />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: theme.color.bg },
-        }}
-      />
+      {/* Onboarding replaces the whole shell on first launch rather than
+          sitting on a route, so there's no way to swipe back into a
+          half-set-up app — and no flash of the camera permission prompt
+          before we've explained why we want it. */}
+      {hasOnboarded ? (
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: theme.color.bg },
+          }}
+        />
+      ) : (
+        <Onboarding />
+      )}
     </>
   );
 }

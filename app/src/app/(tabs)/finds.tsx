@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 import { FlatList, Pressable, View } from "react-native";
 import { useFinds, type Find, type FindStatus } from "@/api/finds";
+import { Celebration, isGreatFlip } from "@/components/celebration";
 import { EmptyState } from "@/components/empty-state";
 import { Pill } from "@/components/pill";
 import { Screen } from "@/components/screen";
@@ -31,6 +32,7 @@ export default function FindsScreen() {
   const router = useRouter();
   const [filter, setFilter] = useState<Filter>("in_stock");
   const [selling, setSelling] = useState<Find | null>(null);
+  const [celebrating, setCelebrating] = useState<number | null>(null);
   const finds = useFinds(filter);
 
   return (
@@ -101,11 +103,19 @@ export default function FindsScreen() {
         <SoldSheet
           find={selling}
           onClose={() => setSelling(null)}
-          onSold={() => {
+          onSold={(sold) => {
             setSelling(null);
             void finds.refetch();
+            const profit = sold.realisedProfitPence ?? 0;
+            if (isGreatFlip(profit, sold.soldPricePence ?? 0)) {
+              setCelebrating(profit);
+            }
           }}
         />
+      ) : null}
+
+      {celebrating !== null ? (
+        <Celebration profitPence={celebrating} onDone={() => setCelebrating(null)} />
       ) : null}
     </Screen>
   );

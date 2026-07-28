@@ -13,9 +13,24 @@ type Props = TextProps & {
 };
 
 /**
- * The only way text is rendered in this app. Raw <Text> at a call site is a
- * code-review flag — variants keep the type scale honest.
+ * Dynamic Type caps.
+ *
+ * Text scales with the reader's system setting — never disabled, because
+ * that's someone's accessibility need, not a preference. But a 56pt hero
+ * price at 3× would push the buttons off a result sheet, so the big display
+ * sizes are capped tighter than body copy: they're already large, so they
+ * need less help, while captions and body text get the full useful range.
  */
+const MAX_SCALE: Record<TypeVariant, number> = {
+  hero: 1.25,
+  display: 1.3,
+  title: 1.4,
+  headline: 1.6,
+  body: 1.8,
+  caption: 1.8,
+  label: 1.6,
+};
+
 export function Type({
   variant = "body",
   tone = "primary",
@@ -36,6 +51,7 @@ export function Type({
 
   return (
     <Text
+      maxFontSizeMultiplier={MAX_SCALE[variant]}
       {...rest}
       style={[
         typeScale[variant],

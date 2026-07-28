@@ -2,7 +2,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { Image } from "expo-image";
 import { useRef, useState } from "react";
-import { ActivityIndicator, Linking, Pressable, ScrollView, View } from "react-native";
+import {
+  ActivityIndicator,
+  Linking,
+  Pressable,
+  ScrollView,
+  View,
+  useWindowDimensions,
+} from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRecentScans, useScanMutation, type Scan } from "@/api/scans";
@@ -14,7 +21,7 @@ import { ResultSheet } from "@/components/result-sheet";
 import { Screen } from "@/components/screen";
 import { Type } from "@/components/type";
 import { useTheme } from "@/design/theme";
-import { radius, space } from "@/design/tokens";
+import { motion, radius, space } from "@/design/tokens";
 import { ApiError } from "@/lib/api";
 import { haptic } from "@/lib/haptics";
 import { compressForUpload } from "@/lib/image";
@@ -148,7 +155,10 @@ export default function ScanScreen() {
       {frozenUri ? (
         <Image source={{ uri: frozenUri }} style={{ flex: 1 }} contentFit="cover" transition={120} />
       ) : (
-        <CameraView ref={cameraRef} style={{ flex: 1 }} facing="back" enableTorch={torch} />
+        <>
+          <CameraView ref={cameraRef} style={{ flex: 1 }} facing="back" enableTorch={torch} />
+          {!sheetOpen ? <FramingGuide hasScanned={(recent.data?.length ?? 0) > 0} /> : null}
+        </>
       )}
 
       {!sheetOpen ? (
@@ -328,6 +338,88 @@ function CameraControls({
         <View style={{ width: 48 }} />
       </View>
     </Animated.View>
+  );
+}
+
+/**
+ * Framing guide. A bare viewfinder gives no clue what a good scan looks
+ * like, and the model reads model numbers far better off one well-framed
+ * item than off a whole table. Brackets rather than a full box so the view
+ * stays open, and the hint retires once you've actually scanned something.
+ */
+function FramingGuide({ hasScanned }: { hasScanned: boolean }) {
+  const { width } = useWindowDimensions();
+  const size = Math.min(width * 0.72, 300);
+  const corner = 34;
+  const thickness = 3;
+  const colour = "rgba(245,242,237,0.85)";
+
+  const bracket = (position: "tl" | "tr" | "bl" | "br") => {
+    const isTop = position === "tl" || position === "tr";
+    const isLeft = position === "tl" || position === "bl";
+    return (
+      <View
+        key={position}
+        style={{
+          position: "absolute",
+          width: corner,
+          height: corner,
+          ...(isTop ? { top: 0 } : { bottom: 0 }),
+          ...(isLeft ? { left: 0 } : { right: 0 }),
+          ...(isTop
+            ? { borderTopWidth: thickness, borderTopColor: colour }
+            : { borderBottomWidth: thickness, borderBottomColor: colour }),
+          ...(isLeft
+            ? { borderLeftWidth: thickness, borderLeftColor: colour }
+            : { borderRightWidth: thickness, borderRightColor: colour }),
+          ...(isTop && isLeft ? { borderTopLeftRadius: radius.card } : {}),
+          ...(isTop && !isLeft ? { borderTopRightRadius: radius.card } : {}),
+          ...(!isTop && isLeft ? { borderBottomLeftRadius: radius.card } : {}),
+          ...(!isTop && !isLeft ? { borderBottomRightRadius: radius.card } : {}),
+        }}
+      />
+    );
+  };
+
+  return (
+    <View
+      pointerEvents="none"
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+      style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <Animated.View
+        entering={FadeIn.duration(motion.slow)}
+        style={{ width: size, height: size }}
+      >
+        {(["tl", "tr", "bl", "br"] as const).map(bracket)}
+      </Animated.View>
+
+      {!hasScanned ? (
+        <Animated.View
+          entering={FadeIn.delay(400).duration(motion.slow)}
+          style={{
+            marginTop: space.xl,
+            backgroundColor: "rgba(18,17,16,0.72)",
+            borderRadius: radius.pill,
+            paddingVertical: space.sm,
+            paddingHorizontal: space.lg,
+          }}
+        >
+          <Type variant="caption" style={{ color: "#F5F2ED" }}>
+            One item, fill the frame — labels help
+          </Type>
+        </Animated.View>
+      ) : null}
+    </View>
   );
 }
 
