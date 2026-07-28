@@ -529,6 +529,126 @@ function screenPaywall() {
   return s;
 }
 
+
+// ---------------------------------------------------------------------------
+// Feature cards (shots 3 and 6)
+//
+// Cropping into a full screen mock dragged in chrome that made no sense out
+// of context — the dimmed camera frame behind the result sheet read as a
+// grey smear, and the tab bar got sliced. These two shots are the moments
+// worth enlarging, so they get purpose-built cards at full size instead:
+// same content, same tokens, composed to fill the frame.
+// ---------------------------------------------------------------------------
+const CARD_X = 70;
+const CARD_Y = 880;
+const CARD_W = W - 140;
+const PAD = 84;
+
+function heroShell(inner) {
+  return (
+    `<rect x="${CARD_X}" y="${CARD_Y}" width="${CARD_W}" height="2100" rx="64" fill="${C.bg}"/>` +
+    `<rect x="${CARD_X}" y="${CARD_Y}" width="${CARD_W}" height="2100" rx="64" fill="none" stroke="#3A3530" stroke-width="4"/>` +
+    inner
+  );
+}
+
+/** Shot 3 — the walk-away number. */
+function heroMaxBuy() {
+  const x = CARD_X + PAD;
+  const w = CARD_W - PAD * 2;
+  let y = CARD_Y + 150;
+  let s = label(x, y, "The item");
+  y += 92;
+  s += text(x, y, "Sony Walkman", { size: 70, weight: 700 });
+  y += 84;
+  s += text(x, y, "WM-EX194", { size: 70, weight: 700 });
+
+  y += 130;
+  s += rect(x, y, w, 2, { fill: C.border });
+
+  y += 140;
+  s += label(x, y, "Median asking price");
+  y += 124;
+  s += text(x, y, "£28.50", { size: 128, weight: 800 });
+  y += 58;
+  s += text(x, y, "Asking prices on eBay UK right now · 23 listings", {
+    size: 30,
+    fill: C.muted,
+  });
+
+  y += 110;
+  s +=
+    rect(x, y, w, 16, { r: 8, fill: C.raised }) +
+    rect(x + w * 0.46, y - 10, 10, 36, { r: 5, fill: C.profit }) +
+    text(x, y + 82, "£8.99", { size: 28, fill: C.faint }) +
+    text(x + w, y + 82, "£45.00", { size: 28, fill: C.faint, anchor: "end" });
+
+  y += 200;
+  s += rect(x, y, w, 420, { r: 36, fill: C.profitBg, stroke: C.profit, sw: 3 });
+  s += label(x + 56, y + 92, "Your max buy price", C.profit);
+  s += text(x + 56, y + 260, "£11.40", { size: 186, weight: 800, fill: C.profit });
+  s += text(x + 56, y + 330, "40% of the median — leaves room for eBay fees,", {
+    size: 30,
+    fill: C.muted,
+  });
+  s += text(x + 56, y + 376, "postage and a worthwhile margin.", { size: 30, fill: C.muted });
+
+  y += 500;
+  s += text(x, y, "Ask more than that and it's not worth it.", {
+    size: 34,
+    weight: 600,
+    fill: C.text,
+  });
+  y += 52;
+  s += text(x, y, "Walk away with a clear conscience.", { size: 34, fill: C.muted });
+  return heroShell(s);
+}
+
+/** Shot 6 — where the money actually went. */
+function heroBreakdown() {
+  const x = CARD_X + PAD;
+  const w = CARD_W - PAD * 2;
+  let y = CARD_Y + 140;
+  let s = photo(x, y, 150, 30);
+  s += pill(x + 196, y + 10, "Sold", { bg: C.profitBg, fg: C.profit });
+  s += text(x + 196, y + 136, "Sony Walkman", { size: 58, weight: 700 });
+
+  y += 250;
+  s += rect(x, y, w, 2, { fill: C.border });
+
+  y += 120;
+  const rows = [
+    ["Sold for", "£42.00", C.text],
+    ["You paid", "−£0.50", C.loss],
+    ["Selling fees (13%)", "−£5.46", C.loss],
+    ["Postage", "−£3.49", C.loss],
+  ];
+  rows.forEach(([k, v, col]) => {
+    s +=
+      text(x, y, k, { size: 40, fill: C.muted }) +
+      text(x + w, y, v, { size: 40, weight: 600, fill: col, anchor: "end" });
+    y += 108;
+  });
+
+  y += 30;
+  s += rect(x, y, w, 2, { fill: C.border });
+  y += 140;
+  s += text(x, y, "Profit", { size: 52, weight: 700 });
+  s += text(x + w, y + 20, "+£32.55", { size: 128, weight: 800, fill: C.profit, anchor: "end" });
+
+  y += 170;
+  s += rect(x, y, w, 240, { r: 36, fill: C.surface });
+  s += label(x + 56, y + 76, "Margin");
+  s += text(x + 56, y + 176, "77.5%", { size: 92, weight: 800, fill: C.gold });
+  s += text(x + w - 56, y + 150, "Bought in Lisburn", {
+    size: 30,
+    fill: C.muted,
+    anchor: "end",
+  });
+  s += text(x + w - 56, y + 194, "for fifty pence", { size: 30, fill: C.muted, anchor: "end" });
+  return heroShell(s);
+}
+
 // ---------------------------------------------------------------------------
 // Composition
 //
@@ -566,7 +686,7 @@ function background(accent, tint) {
       <rect x="${DEV_X}" y="${DEV_Y}" width="${DEV_W}" height="${DEV_H}" rx="72"/>
     </clipPath>
     <clipPath id="zoomClip">
-      <rect x="70" y="900" width="${W - 140}" height="1500" rx="56"/>
+      <rect x="70" y="880" width="${W - 140}" height="2100" rx="64"/>
     </clipPath>
   </defs>
   <rect width="${W}" height="${H}" fill="url(#bg)"/>
@@ -605,17 +725,18 @@ function deviceShot({ screen, float = "" }) {
  */
 function zoomShot({ screen, focusX, focusY, scale }) {
   const boxX = 70;
-  const boxY = 900;
+  const boxY = 880;
   const boxW = W - 140;
-  const boxH = 1500;
+  // Runs off the bottom of the canvas, matching the device shots.
+  const boxH = 2100;
   const tx = boxX + boxW / 2 - focusX * scale;
   const ty = boxY + boxH / 2 - focusY * scale;
   return `
-  <rect x="${boxX}" y="${boxY}" width="${boxW}" height="${boxH}" rx="56" fill="${C.bg}"/>
+  <rect x="${boxX}" y="${boxY}" width="${boxW}" height="${boxH}" rx="64" fill="${C.bg}"/>
   <g clip-path="url(#zoomClip)">
     <g transform="translate(${tx}, ${ty}) scale(${scale})">${screen}</g>
   </g>
-  <rect x="${boxX}" y="${boxY}" width="${boxW}" height="${boxH}" rx="56" fill="none" stroke="#3A3530" stroke-width="4"/>`;
+  <rect x="${boxX}" y="${boxY}" width="${boxW}" height="${boxH}" rx="64" fill="none" stroke="#3A3530" stroke-width="4"/>`;
 }
 
 /** Layout C — the share card, tilted, as an object in its own right. */
@@ -646,7 +767,9 @@ function compose(shot) {
   const tint = shot.tint ?? "#1A160E";
   const lines = shot.caption.split("|");
   let body;
-  if (shot.layout === "zoom") {
+  if (shot.layout === "hero") {
+    body = shot.hero;
+  } else if (shot.layout === "zoom") {
     body = zoomShot(shot);
   } else if (shot.layout === "card") {
     body = cardShot(shot);
@@ -680,11 +803,8 @@ const SHOTS = [
     sub: "Fees and postage already taken off",
     accent: C.profit,
     tint: "#0C1C13",
-    layout: "zoom",
-    screen: resultSheet({ highlightMaxBuy: true }),
-    focusX: SW / 2,
-    focusY: 1230,
-    scale: 1.24,
+    layout: "hero",
+    hero: heroMaxBuy(),
   },
   {
     file: "04-buylog.png",
@@ -704,11 +824,8 @@ const SHOTS = [
     file: "06-detail.png",
     caption: "Every penny|accounted for",
     sub: "See exactly what the fees took",
-    layout: "zoom",
-    screen: screenDetail(),
-    focusX: SW / 2,
-    focusY: 1180,
-    scale: 1.24,
+    layout: "hero",
+    hero: heroBreakdown(),
   },
   {
     file: "07-profit.png",
