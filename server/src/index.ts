@@ -2,6 +2,9 @@ import { serve } from "@hono/node-server";
 import { createApp } from "./app.js";
 import { env } from "./env.js";
 import { logger } from "./logger.js";
+import { initObservability } from "./observability.js";
+
+initObservability();
 
 const app = createApp();
 

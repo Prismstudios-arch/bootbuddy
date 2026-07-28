@@ -3,6 +3,7 @@ import { requestId } from "hono/request-id";
 import { secureHeaders } from "hono/secure-headers";
 import { env } from "./env.js";
 import { logger } from "./logger.js";
+import { captureError } from "./observability.js";
 import { rateLimit } from "./middleware/rate-limit.js";
 import { accountRoutes } from "./routes/account.js";
 import { authRoutes } from "./routes/auth.js";
@@ -105,7 +106,9 @@ export function createApp(deps: AppDeps = {}) {
   );
 
   app.onError((err, c) => {
-    logger.error({ err, requestId: c.get("requestId") }, "unhandled error");
+    const requestId = c.get("requestId");
+    logger.error({ err, requestId }, "unhandled error");
+    captureError(err, { path: c.req.path, method: c.req.method, requestId: String(requestId) });
     return c.json(
       { error: { code: "internal", message: "Something went wrong on our end. Try again?" } },
       500,
