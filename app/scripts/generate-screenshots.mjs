@@ -214,7 +214,6 @@ function screenScan() {
     rect(0, 980, SW, 6, { fill: "#332C25" }) +
     rect(150, 1080, 180, 120, { r: 12, fill: "#1C1815" }) +
     rect(600, 1050, 160, 150, { r: 70, fill: "#1C1815" }) +
-    walkman(SW / 2 - 175, 690, 350) +
     statusBar() +
     bracket(gx, gy, 1, 1) +
     bracket(gx + g, gy, -1, 1) +
@@ -244,7 +243,10 @@ function resultSheet({ highlightMaxBuy = false } = {}) {
   let s =
     rect(0, 0, SW, SH, { fill: "#0B0A09" }) +
     rect(120, 180, 660, 460, { r: 24, fill: "#221E1A" }) +
-    rect(0, 0, SW, SH, { fill: "rgba(18,17,16,0.72)" }) +
+    walkman(190, 250, 520) +
+    // Lighter than the app's scrim so the frozen frame still reads at
+    // thumbnail size; the sheet is still clearly the focus.
+    rect(0, 0, SW, SH, { fill: "rgba(18,17,16,0.55)" }) +
     statusBar() +
     rect(0, top, SW, SH - top, { r: 48, fill: C.bg }) +
     rect(SW / 2 - 36, top + 26, 72, 8, { r: 4, fill: C.border });
@@ -299,7 +301,8 @@ function screenBuyLog() {
   let s =
     rect(0, 0, SW, SH, { fill: "#0B0A09" }) +
     rect(120, 180, 660, 500, { r: 24, fill: "#221E1A" }) +
-    rect(0, 0, SW, SH, { fill: "rgba(18,17,16,0.72)" }) +
+    walkman(190, 270, 520) +
+    rect(0, 0, SW, SH, { fill: "rgba(18,17,16,0.55)" }) +
     statusBar() +
     rect(0, top, SW, SH - top, { r: 48, fill: C.bg }) +
     rect(SW / 2 - 36, top + 26, 72, 8, { r: 4, fill: C.border });
