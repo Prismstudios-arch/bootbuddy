@@ -126,7 +126,7 @@ Continuous deploys: set repo variable `FLY_DEPLOY_ENABLED=true` and secret
 1. ✅ **Foundation** — repo, design tokens, themed tab shell, server skeleton, CI
 2. ✅ **Backend core** — auth (anonymous + refresh rotation + Apple), quota-gated `/v1/scan` with Claude vision + eBay Browse, migrations, deploy pipeline (curl-tested; `fly deploy` awaits real credentials)
 3. ✅ **Scan flow** — camera → compress (≤1024px, ~70% JPEG) → upload → Result Sheet with count-up reveal, range bar, refine, and loading/error/empty/success states
-4. **Portfolio + Profit** — finds CRUD, sold flow, stats, charts, share card
+4. ✅ **Portfolio + Profit** — finds CRUD, two-tap buy log, sold flow with fee estimation, stats aggregates, six-month chart, share card
 5. **Monetization** — quotas, paywall, MockPurchases/RevenueCat behind one interface, webhook
 6. **Hardening** — security checklist, Sentry, accessibility, en-GB copy pass
 7. **Ship prep** — EAS build, TestFlight, screenshots, privacy labels, submit

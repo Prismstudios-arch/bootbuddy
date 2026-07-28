@@ -1,8 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
-import { Linking, Pressable, ScrollView, TextInput, View } from "react-native";
-import Animated, { FadeIn, SlideInDown } from "react-native-reanimated";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Linking, Pressable, TextInput, View } from "react-native";
 import { useRefineMutation, type Quota, type Scan } from "@/api/scans";
 import { useTheme } from "@/design/theme";
 import { radius, space } from "@/design/tokens";
@@ -11,6 +9,7 @@ import { formatPence } from "@/lib/money";
 import { Button } from "./button";
 import { CountUpPrice } from "./count-up";
 import { Pill } from "./pill";
+import { Sheet } from "./sheet";
 import { ResultSkeleton } from "./skeleton";
 import { Type } from "./type";
 
@@ -39,73 +38,23 @@ export function ResultSheet({
   onRetry,
   onBought,
 }: Props) {
-  const theme = useTheme();
-  const insets = useSafeAreaInsets();
-
   return (
-    <View style={{ ...StyleSheetAbsoluteFill, justifyContent: "flex-end" }}>
-      <Animated.View
-        entering={FadeIn.duration(200)}
-        style={{ ...StyleSheetAbsoluteFill, backgroundColor: theme.color.scrim }}
-      >
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Dismiss result"
-          style={{ flex: 1 }}
-          onPress={onClose}
-        />
-      </Animated.View>
-
-      <Animated.View
-        entering={SlideInDown.springify().damping(20).stiffness(180)}
-        style={{
-          backgroundColor: theme.color.bg,
-          borderTopLeftRadius: radius.sheet,
-          borderTopRightRadius: radius.sheet,
-          paddingTop: space.md,
-          paddingBottom: insets.bottom + space.lg,
-          maxHeight: "88%",
-        }}
-      >
-        <View
-          style={{
-            alignSelf: "center",
-            width: 36,
-            height: 4,
-            borderRadius: radius.pill,
-            backgroundColor: theme.color.border,
-            marginBottom: space.md,
-          }}
-        />
-        <ScrollView
-          contentContainerStyle={{ paddingHorizontal: space.gutter, paddingBottom: space.md }}
-          showsVerticalScrollIndicator={false}
-        >
-          {state === "loading" ? (
-            <View style={{ gap: space.md, paddingVertical: space.sm }}>
-              <Type variant="label" tone="secondary">
-                Checking the market…
-              </Type>
-              <ResultSkeleton />
-            </View>
-          ) : state === "error" ? (
-            <ErrorBody message={errorMessage} onRetry={onRetry} />
-          ) : scan ? (
-            <SuccessBody scan={scan} quota={quota} onBought={onBought} onClose={onClose} />
-          ) : null}
-        </ScrollView>
-      </Animated.View>
-    </View>
+    <Sheet onClose={onClose}>
+      {state === "loading" ? (
+        <View style={{ gap: space.md, paddingVertical: space.sm }}>
+          <Type variant="label" tone="secondary">
+            Checking the market…
+          </Type>
+          <ResultSkeleton />
+        </View>
+      ) : state === "error" ? (
+        <ErrorBody message={errorMessage} onRetry={onRetry} />
+      ) : scan ? (
+        <SuccessBody scan={scan} quota={quota} onBought={onBought} onClose={onClose} />
+      ) : null}
+    </Sheet>
   );
 }
-
-const StyleSheetAbsoluteFill = {
-  position: "absolute" as const,
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-};
 
 function ErrorBody({ message, onRetry }: { message?: string; onRetry: () => void }) {
   const theme = useTheme();

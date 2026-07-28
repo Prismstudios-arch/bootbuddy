@@ -44,7 +44,8 @@
           "cameraPermission": "Boot Sale Buddy uses the camera to identify items and estimate their resale value."
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true,

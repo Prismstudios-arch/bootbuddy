@@ -9,6 +9,10 @@ packages: `app/` (Expo SDK 57, expo-router, TypeScript strict) and `server/`
 
 - **Money is integer pence everywhere.** Server: `Pence` branded type in
   `server/src/lib/money.ts`. Columns end `_pence`. Never floats for money.
+- **Profit maths lives only in `server/src/lib/profit.ts`** and is computed
+  server-side so every client agrees. Realised (sold: sale − cost − fees −
+  postage) and unrealised (in stock: estimate − cost) never mix; unrealised
+  is always labelled an estimate in the UI.
 - **No third-party API key ever ships in the app.** Anthropic + eBay calls
   happen only on the server. App talks to our API with its own JWT.
 - **Never claim "sold prices".** eBay Browse returns *active* listings; all

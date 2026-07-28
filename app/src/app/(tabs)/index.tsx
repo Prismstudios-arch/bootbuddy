@@ -6,6 +6,7 @@ import { ActivityIndicator, Linking, Pressable, ScrollView, View } from "react-n
 import Animated, { FadeIn } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRecentScans, useScanMutation, type Scan } from "@/api/scans";
+import { BuyLogSheet } from "@/components/buy-log-sheet";
 import { Button } from "@/components/button";
 import { Pill } from "@/components/pill";
 import { ResultSheet } from "@/components/result-sheet";
@@ -28,6 +29,7 @@ export default function ScanScreen() {
   const [torch, setTorch] = useState(false);
   const [frozenUri, setFrozenUri] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [buying, setBuying] = useState<Scan | null>(null);
   const cameraRef = useRef<CameraView>(null);
 
   const scan = useScanMutation();
@@ -107,9 +109,17 @@ export default function ScanScreen() {
               void compressForUpload(frozenUri).then((b64) => scan.mutate(b64));
             }
           }}
-          onBought={() => {
-            // Phase 4 opens the two-tap buy log; for now the win is recorded
-            // as a scan and the sheet closes cleanly.
+          onBought={(bought) => setBuying(bought)}
+        />
+      ) : null}
+
+      {buying ? (
+        <BuyLogSheet
+          scan={buying}
+          onClose={() => setBuying(null)}
+          onLogged={() => {
+            haptic.scanDone();
+            setBuying(null);
             dismiss();
           }}
         />

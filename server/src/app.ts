@@ -6,6 +6,7 @@ import { logger } from "./logger.js";
 import { rateLimit } from "./middleware/rate-limit.js";
 import { accountRoutes } from "./routes/account.js";
 import { authRoutes } from "./routes/auth.js";
+import { findsRoutes } from "./routes/finds.js";
 import { scanRoutes } from "./routes/scan.js";
 import type { PriceSearchFn } from "./services/ebay.js";
 import type { IdentifyFn } from "./services/vision.js";
@@ -66,6 +67,7 @@ export function createApp(deps: AppDeps = {}) {
       .use("*", rateLimit({ name: "scan", limit: 15, windowMs: 60_000 }))
       .route("/", scanRoutes(deps)),
   );
+  app.route("/v1/finds", findsRoutes);
   app.route("/v1", accountRoutes);
 
   // Privacy policy + terms are served from the API host so the App Store

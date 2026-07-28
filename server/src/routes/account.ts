@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { requireAuth, type AuthEnv } from "../auth/middleware.js";
 import { getDb, schema } from "../db/client.js";
 import { getQuota } from "../services/quota.js";
+import { computeStats } from "../services/stats.js";
 
 export const accountRoutes = new Hono<AuthEnv>()
   .use("*", requireAuth)
@@ -15,6 +16,13 @@ export const accountRoutes = new Hono<AuthEnv>()
       user: { id: user.id, entitlement: user.entitlement },
       quota: await getQuota(db, user),
     });
+  })
+
+  /** Profit dashboard aggregates — computed server-side, one source of truth. */
+  .get("/stats", async (c) => {
+    const user = c.get("user");
+    const db = await getDb();
+    return c.json({ stats: await computeStats(db, user.id) });
   })
 
   /**
