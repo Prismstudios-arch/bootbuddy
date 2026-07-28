@@ -1,5 +1,9 @@
 # Boot Sale Buddy
 
+> **Live API:** https://boot-sale-buddy-api.fly.dev — Fly.io (2× LHR) +
+> Neon Postgres (London) + Gemini vision. The app points here by default,
+> so scanning the Expo Go QR on a phone works with no configuration.
+
 Point your camera at anything at a car boot sale — instantly see what it's
 selling for online, whether it's worth buying, and track your real flip
 profits like a trading portfolio.
@@ -33,12 +37,12 @@ npm run typecheck
 npm run lint
 ```
 
-The app needs to know where the API lives. `localhost` means *the phone*,
-so on a real device set your machine's LAN IP (or the deployed URL):
+The app talks to the deployed API by default. To develop against a local
+server, override it — on a real device use your machine's LAN IP, because
+`localhost` there means *the phone*:
 
 ```sh
-EXPO_PUBLIC_API_URL=http://192.168.1.42:8080 npm start   # LAN
-EXPO_PUBLIC_API_URL=https://boot-sale-buddy-api.fly.dev npm start
+EXPO_PUBLIC_API_URL=http://192.168.1.42:8080 npm start
 ```
 
 **Server** (zero setup — no Docker, no local Postgres):
@@ -65,17 +69,18 @@ curl -s -X POST localhost:8080/v1/scan \
   -d '{"imageBase64":"<base64 jpeg>"}'                     # → identification + prices + quota
 ```
 
-**Deploying to Fly** (first time):
+**Deploying** — already set up (`boot-sale-buddy-api`, 2 machines in LHR,
+Neon Postgres in London). Redeploy after a server change with:
 
 ```sh
-cd server
-fly launch --no-deploy          # accept the existing fly.toml
-fly postgres create             # or use Neon; either way:
-fly secrets set DATABASE_URL=... JWT_SECRET=$(openssl rand -base64 48) \
-  ANTHROPIC_API_KEY=sk-ant-... EBAY_CLIENT_ID=... EBAY_CLIENT_SECRET=... \
-  REVENUECAT_WEBHOOK_AUTH=$(openssl rand -hex 24)
-fly deploy                      # release_command runs migrations first
-fly scale count 2               # zero-downtime rolling deploys
+cd server && fly deploy --remote-only
+```
+
+Migrations run automatically as the Fly `release_command` before new
+machines take traffic. To rotate or add a secret:
+
+```sh
+fly secrets set EBAY_CLIENT_ID=... EBAY_CLIENT_SECRET=...   # triggers a redeploy
 ```
 
 Continuous deploys: set repo variable `FLY_DEPLOY_ENABLED=true` and secret

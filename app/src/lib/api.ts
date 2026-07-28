@@ -12,12 +12,14 @@ import { Platform } from "react-native";
  * refreshes a stale access token on the first 401. The user never sees a
  * login wall — Sign in with Apple is an upgrade, not an entry fee.
  */
-export const API_URL =
-  process.env.EXPO_PUBLIC_API_URL ??
-  // Android emulators reach the host machine on 10.0.2.2, iOS sim on
-  // localhost. On a real phone in Expo Go, set EXPO_PUBLIC_API_URL to your
-  // LAN IP or the deployed API — localhost is the phone itself.
-  (Platform.OS === "android" ? "http://10.0.2.2:8080" : "http://localhost:8080");
+/**
+ * Defaults to the deployed API so scanning the Expo Go QR code Just Works
+ * on a real phone — `localhost` there means the phone itself, which is the
+ * classic "why is my app not loading" afternoon. Point at a local server
+ * with EXPO_PUBLIC_API_URL (use your machine's LAN IP, not localhost, if
+ * you're testing on a device).
+ */
+export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "https://boot-sale-buddy-api.fly.dev";
 
 const ACCESS_KEY = "bsb.accessToken";
 const REFRESH_KEY = "bsb.refreshToken";
