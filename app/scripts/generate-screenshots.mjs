@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
@@ -68,12 +68,77 @@ function text(x, y, content, o = {}) {
   return `<text x="${x}" y="${y}" font-family="${family}" font-size="${size}" font-weight="${weight}" fill="${fill}" text-anchor="${anchor}" opacity="${opacity}"${spacing ? ` letter-spacing="${spacing}"` : ""}>${esc(content)}</text>`;
 }
 
-/** A small stand-in "photo" so thumbnails aren't empty grey voids. */
+
+// ---------------------------------------------------------------------------
+// Item artwork
+//
+// Drawn rather than photographed, deliberately. A real photo would look
+// better, but stock images of branded products are a licensing minefield
+// for App Store marketing — most Wikimedia photos are CC-BY-SA, which needs
+// visible attribution, and a photo of someone's Walkman isn't ours to use.
+//
+// To use your own photo instead: drop a square JPEG or PNG at
+// assets/screenshots/raw/item.jpg and it's embedded automatically
+// everywhere this illustration appears. Your own photo of your own item is
+// the safest and most authentic option by a mile.
+// ---------------------------------------------------------------------------
+let ITEM_PHOTO = null;
+try {
+  const raw = join(here, "..", "assets", "screenshots", "raw");
+  for (const name of ["item.jpg", "item.jpeg", "item.png"]) {
+    const file = join(raw, name);
+    if (existsSync(file)) {
+      const mime = name.endsWith("png") ? "image/png" : "image/jpeg";
+      ITEM_PHOTO = `data:${mime};base64,${readFileSync(file).toString("base64")}`;
+      console.log(`using your photo: assets/screenshots/raw/${name}`);
+      break;
+    }
+  }
+} catch {
+  // No photo supplied — the illustration below is used.
+}
+
+/**
+ * A personal cassette player, drawn to be recognisable at thumbnail size:
+ * body, window with two spools, transport buttons, headphone lead.
+ */
+function walkman(x, y, w, opts = {}) {
+  const h = opts.h ?? w * 0.72;
+  const k = w / 300; // everything scales off a 300-wide reference
+  if (ITEM_PHOTO) {
+    return `<image href="${ITEM_PHOTO}" x="${x}" y="${y}" width="${w}" height="${h}" preserveAspectRatio="xMidYMid slice" clip-path="inset(0 round ${16 * k})"/>`;
+  }
+  const cx = x + w / 2;
+  const cy = y + h / 2;
+  return (
+    // Body with a soft top highlight, so it reads as a moulded object.
+    `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${18 * k}" fill="#6B6259"/>` +
+    `<rect x="${x}" y="${y}" width="${w}" height="${h * 0.42}" rx="${18 * k}" fill="#7C736A"/>` +
+    // Cassette window.
+    `<rect x="${x + 30 * k}" y="${y + 26 * k}" width="${w - 60 * k}" height="${h * 0.5}" rx="${10 * k}" fill="#241F1B"/>` +
+    `<rect x="${x + 40 * k}" y="${y + 34 * k}" width="${w - 80 * k}" height="${h * 0.5 - 16 * k}" rx="${6 * k}" fill="#3A332C"/>` +
+    // Two spools.
+    `<circle cx="${cx - 44 * k}" cy="${y + h * 0.3}" r="${30 * k}" fill="#1C1815"/>` +
+    `<circle cx="${cx - 44 * k}" cy="${y + h * 0.3}" r="${13 * k}" fill="#8A7F72"/>` +
+    `<circle cx="${cx + 44 * k}" cy="${y + h * 0.3}" r="${30 * k}" fill="#1C1815"/>` +
+    `<circle cx="${cx + 44 * k}" cy="${y + h * 0.3}" r="${13 * k}" fill="#8A7F72"/>` +
+    // Transport buttons.
+    `<rect x="${x + 34 * k}" y="${y + h * 0.68}" width="${w - 68 * k}" height="${h * 0.2}" rx="${8 * k}" fill="#514940"/>` +
+    [0, 1, 2, 3].
+      map(
+        (i) =>
+          `<rect x="${x + 46 * k + i * 58 * k}" y="${y + h * 0.72}" width="${40 * k}" height="${h * 0.12}" rx="${5 * k}" fill="#9A9086"/>`,
+      )
+      .join("") +
+    // Headphone lead trailing off the corner.
+    `<path d="M ${x + w - 10 * k} ${cy} q ${40 * k} ${30 * k} ${16 * k} ${70 * k}" stroke="#2A2521" stroke-width="${7 * k}" fill="none" stroke-linecap="round"/>`
+  );
+}
+
+/** Thumbnail-sized item artwork with a soft backing. */
 const photo = (x, y, size, r = 18) =>
-  `<rect x="${x}" y="${y}" width="${size}" height="${size}" rx="${r}" fill="#3A322B"/>` +
-  `<rect x="${x + size * 0.18}" y="${y + size * 0.3}" width="${size * 0.64}" height="${size * 0.34}" rx="${size * 0.06}" fill="#544A3F"/>` +
-  `<circle cx="${x + size * 0.34}" cy="${y + size * 0.47}" r="${size * 0.08}" fill="#3A322B"/>` +
-  `<circle cx="${x + size * 0.66}" cy="${y + size * 0.47}" r="${size * 0.08}" fill="#3A322B"/>`;
+  `<rect x="${x}" y="${y}" width="${size}" height="${size}" rx="${r}" fill="#2A2520"/>` +
+  walkman(x + size * 0.08, y + size * 0.22, size * 0.84, { h: size * 0.6 });
 
 const rect = (x, y, w, h, o = {}) =>
   `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${o.r ?? 0}" fill="${o.fill ?? C.surface}"${o.stroke ? ` stroke="${o.stroke}" stroke-width="${o.sw ?? 2}"` : ""}${o.opacity ? ` opacity="${o.opacity}"` : ""}/>`;
@@ -149,11 +214,7 @@ function screenScan() {
     rect(0, 980, SW, 6, { fill: "#332C25" }) +
     rect(150, 1080, 180, 120, { r: 12, fill: "#1C1815" }) +
     rect(600, 1050, 160, 150, { r: 70, fill: "#1C1815" }) +
-    rect(SW / 2 - 150, 700, 300, 210, { r: 20, fill: "#4A423A" }) +
-    rect(SW / 2 - 120, 736, 240, 120, { r: 10, fill: "#2A2520" }) +
-    `<circle cx="${SW / 2 - 56}" cy="796" r="40" fill="#3A342D"/>` +
-    `<circle cx="${SW / 2 + 56}" cy="796" r="40" fill="#3A342D"/>` +
-    rect(SW / 2 - 150, 880, 300, 30, { r: 8, fill: "#3A332C" }) +
+    walkman(SW / 2 - 175, 690, 350) +
     statusBar() +
     bracket(gx, gy, 1, 1) +
     bracket(gx + g, gy, -1, 1) +
@@ -329,8 +390,7 @@ function screenDetail() {
   // Photo hero.
   s +=
     rect(0, 0, SW, 620, { fill: "#2A2420" }) +
-    `<circle cx="${SW / 2}" cy="330" r="150" fill="#3A322B"/>` +
-    rect(SW / 2 - 60, 250, 120, 170, { r: 14, fill: "#4A3F35" }) +
+    walkman(SW / 2 - 210, 220, 420) +
     statusBar() +
     `<circle cx="90" cy="120" r="46" fill="rgba(18,17,16,0.6)"/>` +
     text(90, 136, "‹", { size: 56, fill: C.text, anchor: "middle" });
@@ -436,7 +496,7 @@ function screenShare() {
   s += rect(cx, cy, cw, ch, { r: 32, fill: "#0E0D0C" });
   s += label(cx + 60, cy + 100, "That's a find", C.gold);
   s += rect(cx + 60, cy + 140, cw - 120, 420, { r: 20, fill: "#2A2420" });
-  s += `<circle cx="${cx + cw / 2}" cy="${cy + 350}" r="120" fill="#3A322B"/>`;
+  s += walkman(cx + cw / 2 - 170, cy + 200, 340);
   s += text(cx + 60, cy + 640, "Sony Walkman WM-EX194", { size: 44, weight: 700 });
   s += text(cx + 60, cy + 720, "Found for £0.50  →  Sold for £42.00", {
     size: 28,
