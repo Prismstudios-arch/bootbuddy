@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Pressable, View } from "react-native";
 import { scanKeys } from "@/api/scans";
@@ -7,8 +8,6 @@ import { findKeys } from "@/api/finds";
 import { useTheme } from "@/design/theme";
 import { radius, space } from "@/design/tokens";
 import { haptic } from "@/lib/haptics";
-import { openUrl } from "@/lib/links";
-import { API_URL } from "@/lib/api";
 import { getPurchases, type Offering, type PackageId } from "@/purchases";
 import { Button } from "./button";
 import { Pill } from "./pill";
@@ -40,6 +39,7 @@ export function Paywall({
   const theme = useTheme();
   const queryClient = useQueryClient();
   const purchases = getPurchases();
+  const router = useRouter();
   const [offerings, setOfferings] = useState<Offering[]>([]);
   const [selected, setSelected] = useState<PackageId>("annual");
   const [busy, setBusy] = useState(false);
@@ -134,7 +134,10 @@ export function Paywall({
         <Pressable
           accessibilityRole="link"
           accessibilityLabel="Terms of use"
-          onPress={() => void openUrl(`${API_URL}/terms`)}
+          onPress={() => {
+            onClose();
+            router.push("/legal?doc=terms");
+          }}
         >
           <Type variant="caption" tone="secondary">
             Terms
@@ -143,7 +146,10 @@ export function Paywall({
         <Pressable
           accessibilityRole="link"
           accessibilityLabel="Privacy policy"
-          onPress={() => void openUrl(`${API_URL}/privacy`)}
+          onPress={() => {
+            onClose();
+            router.push("/legal?doc=privacy");
+          }}
         >
           <Type variant="caption" tone="secondary">
             Privacy

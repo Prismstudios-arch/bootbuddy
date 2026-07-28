@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
 import Constants from "expo-constants";
+import { useRouter } from "expo-router";
 import { useState } from "react";
 import { Alert, Pressable, ScrollView, View } from "react-native";
 import { findKeys } from "@/api/finds";
@@ -13,7 +14,7 @@ import { useTheme } from "@/design/theme";
 import { API_URL, apiFetch, ApiError, clearSession } from "@/lib/api";
 import { radius, space } from "@/design/tokens";
 import { haptic } from "@/lib/haptics";
-import { openAppleSubscriptions, openSupportEmail, openUrl } from "@/lib/links";
+import { openAppleSubscriptions, openSupportEmail } from "@/lib/links";
 import { getPurchases } from "@/purchases";
 import { useAppStore, type Appearance } from "@/state/app-store";
 
@@ -33,6 +34,7 @@ const FEE_PRESETS = [10, 13, 15, 20];
 
 export default function SettingsScreen() {
   const queryClient = useQueryClient();
+  const router = useRouter();
   const session = useSession();
   const purchases = getPurchases();
   const appearance = useAppStore((s) => s.appearance);
@@ -222,13 +224,19 @@ export default function SettingsScreen() {
           <Row
             icon="lock-closed-outline"
             label="Privacy Policy"
-            onPress={() => void openUrl(`${API_URL}/privacy`)}
+            onPress={() => {
+              haptic.tap();
+              router.push("/legal?doc=privacy");
+            }}
           />
           <Divider />
           <Row
             icon="document-text-outline"
             label="Terms of Use"
-            onPress={() => void openUrl(`${API_URL}/terms`)}
+            onPress={() => {
+              haptic.tap();
+              router.push("/legal?doc=terms");
+            }}
           />
           <Divider />
           <Row
