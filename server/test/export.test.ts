@@ -126,3 +126,47 @@ describe("GET /v1/finds/export", () => {
     expect(csv.trim().split("\r\n")).toHaveLength(1);
   });
 });
+
+describe("price source routing", () => {
+  it("labels sold data as sold and asking data as asking", async () => {
+    const app = createApp({
+      identify: async () => ({
+        name: "Fleetwood Mac — Rumours",
+        brand: "Warner",
+        model: null,
+        category: "records_media",
+        era: "1977",
+        search_query: "fleetwood mac rumours vinyl",
+        confidence: 0.9,
+      }),
+      priceSearch: async (_query, category) =>
+        category === "records_media"
+          ? {
+              lowPence: 800 as never,
+              medianPence: 1800 as never,
+              highPence: 3500 as never,
+              listingCount: 42,
+              maxBuyPence: 720 as never,
+              source: "discogs" as const,
+              basis: "sold" as const,
+            }
+          : null,
+    });
+    const session = await signup(app);
+
+    const res = await app.request("/v1/scan", {
+      method: "POST",
+      headers: { authorization: `Bearer ${session.accessToken}`, "content-type": "application/json" },
+      body: JSON.stringify({ imageBase64: Buffer.from("vinyl".repeat(40)).toString("base64") }),
+    });
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as {
+      scan: { askingPrices: { source: string; basis: string; medianPence: number } };
+    };
+    // The label must survive the round-trip through the database, or a
+    // reload would quietly downgrade real sold data to "asking".
+    expect(body.scan.askingPrices.source).toBe("discogs");
+    expect(body.scan.askingPrices.basis).toBe("sold");
+    expect(body.scan.askingPrices.medianPence).toBe(1800);
+  });
+});

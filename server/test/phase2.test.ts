@@ -25,6 +25,8 @@ const PRICES = {
   highPence: pence(4500),
   listingCount: 21,
   maxBuyPence: pence(1140),
+  source: "ebay" as const,
+  basis: "asking" as const,
 };
 
 function fakeImage(seed = "a"): string {

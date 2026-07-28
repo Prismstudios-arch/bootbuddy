@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { Pressable, TextInput, View } from "react-native";
-import { useRefineMutation, type Quota, type Scan } from "@/api/scans";
+import { useRefineMutation, type AskingPrices, type Quota, type Scan } from "@/api/scans";
 import { useTheme } from "@/design/theme";
 import { radius, space } from "@/design/tokens";
 import { haptic } from "@/lib/haptics";
@@ -118,7 +118,7 @@ function SuccessBody({
           <View style={{ gap: space.xs }}>
             <CountUpPrice pence={prices.medianPence} />
             <Type variant="caption" tone="secondary">
-              Asking prices on eBay UK right now · {prices.listingCount} listings
+              {priceCaption(prices)}
             </Type>
           </View>
 
@@ -256,6 +256,23 @@ function SuccessBody({
       ) : null}
     </View>
   );
+}
+
+/**
+ * The honesty line under the hero price. It must always say what the number
+ * actually is: eBay's public API only exposes ACTIVE listings, so those are
+ * asking prices and we say so. Discogs price suggestions come from completed
+ * sales, so there we can legitimately say "sold for". Getting this wrong in
+ * either direction misleads someone about to spend their own money.
+ */
+function priceCaption(prices: AskingPrices): string {
+  const count = prices.listingCount;
+  if (prices.source === "discogs") {
+    return prices.basis === "sold"
+      ? `What copies actually sold for on Discogs · ${count} for sale now`
+      : `Cheapest copy listed on Discogs · ${count} for sale`;
+  }
+  return `Asking prices on eBay UK right now · ${count} listings`;
 }
 
 /** "2 scans left today" for free, "this month" for Pro — the pill must not

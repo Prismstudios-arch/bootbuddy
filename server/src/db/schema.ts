@@ -60,6 +60,11 @@ export const scans = pgTable(
     priceMedianPence: integer("price_median_pence"),
     priceHighPence: integer("price_high_pence"),
     listingCount: integer("listing_count").notNull().default(0),
+    // Which source priced it, and whether those are completed-sale prices
+    // or live asking prices. Persisted so the honest label on the result
+    // sheet survives a reload — it must never silently become "sold".
+    priceSource: text("price_source"),
+    priceBasis: text("price_basis"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("scans_user_created_idx").on(t.userId, t.createdAt)],

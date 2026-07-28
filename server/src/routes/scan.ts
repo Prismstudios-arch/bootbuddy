@@ -6,7 +6,7 @@ import { and, desc, eq, gte } from "drizzle-orm";
 import { requireAuth, type AuthEnv } from "../auth/middleware.js";
 import { getDb, schema } from "../db/client.js";
 import { consumeScan, getQuota, refundScan } from "../services/quota.js";
-import { searchAskingPrices, type PriceSearchFn } from "../services/ebay.js";
+import { lookupPrices, type PriceLookup } from "../services/pricing.js";
 import { VisionBusyError } from "../services/vision-gemini.js";
 import { identifyItem, UpstreamNotConfiguredError, type IdentifyFn } from "../services/vision.js";
 
@@ -33,12 +33,12 @@ const refineBody = z.object({ query: z.string().trim().min(2).max(80) });
 const MIN_CONFIDENCE_FOR_LOOKUP = 0.15;
 const DEDUPE_WINDOW_MS = 24 * 60 * 60 * 1000;
 
-type Deps = { identify: IdentifyFn; priceSearch: PriceSearchFn };
+type Deps = { identify: IdentifyFn; priceSearch: PriceLookup };
 
 export function scanRoutes(overrides: Partial<Deps> = {}) {
   const deps: Deps = {
     identify: overrides.identify ?? identifyItem,
-    priceSearch: overrides.priceSearch ?? searchAskingPrices,
+    priceSearch: overrides.priceSearch ?? lookupPrices,
   };
   return new Hono<AuthEnv>()
     .use("*", requireAuth)
@@ -132,7 +132,9 @@ export function scanRoutes(overrides: Partial<Deps> = {}) {
           identification.confidence >= MIN_CONFIDENCE_FOR_LOOKUP &&
           identification.search_query.length > 0;
         // eBay failure degrades gracefully: prices null, app offers retry.
-        const prices = identifiable ? await deps.priceSearch(identification.search_query) : null;
+        const prices = identifiable
+          ? await deps.priceSearch(identification.search_query, identification.category)
+          : null;
 
         const [scan] = await db
           .insert(schema.scans)
@@ -148,6 +150,8 @@ export function scanRoutes(overrides: Partial<Deps> = {}) {
             priceMedianPence: prices?.medianPence ?? null,
             priceHighPence: prices?.highPence ?? null,
             listingCount: prices?.listingCount ?? 0,
+            priceSource: prices?.source ?? null,
+            priceBasis: prices?.basis ?? null,
           })
           .returning();
         if (!scan) throw new Error("scan insert returned nothing");
@@ -183,6 +187,8 @@ export function scanRoutes(overrides: Partial<Deps> = {}) {
           priceMedianPence: prices?.medianPence ?? null,
           priceHighPence: prices?.highPence ?? null,
           listingCount: prices?.listingCount ?? 0,
+          priceSource: prices?.source ?? null,
+          priceBasis: prices?.basis ?? null,
         })
         .where(eq(schema.scans.id, scan.id))
         .returning();
@@ -214,6 +220,11 @@ function toScanResponse(scan: ScanRow) {
           highPence: scan.priceHighPence,
           listingCount: scan.listingCount,
           maxBuyPence: Math.floor((scan.priceMedianPence ?? 0) * 0.4),
+          // Which source, and whether these are completed sales or live
+          // asking prices. Defaults are the cautious ones: an older row
+          // with no basis recorded must read as "asking", never "sold".
+          source: scan.priceSource ?? "ebay",
+          basis: scan.priceBasis === "sold" ? "sold" : "asking",
         }
       : null,
     createdAt: scan.createdAt.toISOString(),

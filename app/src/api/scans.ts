@@ -7,6 +7,10 @@ export type AskingPrices = {
   highPence: number;
   listingCount: number;
   maxBuyPence: number;
+  /** Which source priced it. */
+  source: "ebay" | "discogs";
+  /** Completed sales, or what sellers are currently asking. */
+  basis: "sold" | "asking";
 };
 
 export type Scan = {

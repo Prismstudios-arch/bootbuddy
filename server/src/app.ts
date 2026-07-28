@@ -13,10 +13,10 @@ import { findsRoutes } from "./routes/finds.js";
 import { redeemRoutes } from "./routes/redeem.js";
 import { scanRoutes } from "./routes/scan.js";
 import { webhookRoutes } from "./routes/webhooks.js";
-import type { PriceSearchFn } from "./services/ebay.js";
+import type { PriceLookup } from "./services/pricing.js";
 import type { IdentifyFn } from "./services/vision.js";
 
-export type AppDeps = { identify?: IdentifyFn; priceSearch?: PriceSearchFn };
+export type AppDeps = { identify?: IdentifyFn; priceSearch?: PriceLookup };
 
 /**
  * App factory, separate from the listener so tests can call

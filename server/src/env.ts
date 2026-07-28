@@ -32,6 +32,10 @@ const base = z.object({
   EBAY_CLIENT_SECRET: z.string().optional(),
   EBAY_ENV: z.enum(["production", "sandbox"]).default("production"),
 
+  // Discogs personal access token — prices records/CDs from real completed
+  // sales. Free, no approval process. Missing token = provider skipped.
+  DISCOGS_TOKEN: z.string().optional(),
+
   // Sign in with Apple token verification (audience check).
   APPLE_BUNDLE_ID: z.string().default("com.bootsalebuddy.app"),
 
