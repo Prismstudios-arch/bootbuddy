@@ -2,7 +2,7 @@
   "expo": {
     "name": "Boot Sale Buddy",
     "slug": "boot-sale-buddy",
-    "version": "0.1.0",
+    "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "bootsalebuddy",
@@ -12,7 +12,12 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.bootsalebuddy.app",
       "infoPlist": {
-        "NSCameraUsageDescription": "Boot Sale Buddy uses the camera to identify items and estimate their resale value."
+        "NSCameraUsageDescription": "Boot Sale Buddy uses the camera to identify items and estimate their resale value. Photos are processed and then discarded — never stored on our servers.",
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "buildNumber": "1",
+      "config": {
+        "usesNonExemptEncryption": false
       }
     },
     "android": {
@@ -22,7 +27,8 @@
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "versionCode": 1
     },
     "web": {
       "output": "static",
@@ -49,6 +55,7 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "primaryColor": "#E8B14E"
   }
 }

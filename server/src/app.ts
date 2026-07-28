@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { requestId } from "hono/request-id";
 import { secureHeaders } from "hono/secure-headers";
 import { env } from "./env.js";
+import { privacyPage, termsPage } from "./legal.js";
 import { logger } from "./logger.js";
 import { captureError } from "./observability.js";
 import { rateLimit } from "./middleware/rate-limit.js";
@@ -87,19 +88,10 @@ export function createApp(deps: AppDeps = {}) {
     app.route("/v1/dev", devRoutes);
   }
 
-  // Privacy policy + terms are served from the API host so the App Store
-  // listing has stable URLs from day one. Real copy lands in ship prep.
-  app.get("/privacy", (c) =>
-    c.html(placeholderPage("Privacy Policy", "Our privacy policy is being finalised.")),
-  );
-  app.get("/terms", (c) =>
-    c.html(
-      placeholderPage(
-        "Terms of Use",
-        "Our terms are being finalised. Price information shown in Boot Sale Buddy is an estimate based on current eBay asking prices and is not financial advice.",
-      ),
-    ),
-  );
+  // Public URLs for the App Store listing and the in-app links. Content
+  // lives in legal.ts and must stay true to what the code actually does.
+  app.get("/privacy", (c) => c.html(privacyPage));
+  app.get("/terms", (c) => c.html(termsPage));
 
   app.notFound((c) =>
     c.json({ error: { code: "not_found", message: "That route doesn't exist." } }, 404),
@@ -118,6 +110,3 @@ export function createApp(deps: AppDeps = {}) {
   return app;
 }
 
-function placeholderPage(title: string, body: string): string {
-  return `<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title} — Boot Sale Buddy</title><style>body{font-family:system-ui;max-width:40rem;margin:4rem auto;padding:0 1.5rem;background:#121110;color:#F5F2ED;line-height:1.6}h1{font-size:1.5rem}</style></head><body><h1>${title}</h1><p>${body}</p></body></html>`;
-}
