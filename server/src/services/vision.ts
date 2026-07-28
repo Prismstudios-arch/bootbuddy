@@ -1,41 +1,33 @@
-import Anthropic from "@anthropic-ai/sdk";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
 import { env } from "../env.js";
-import { logger } from "../logger.js";
+import { identifyWithAnthropic } from "./vision-anthropic.js";
+import { identifyWithGemini } from "./vision-gemini.js";
 
 /**
- * Item identification. Claude identifies; eBay prices — the model is never
- * asked for a value and the schema gives it nowhere to put one.
+ * Item identification — provider-pluggable. The model identifies; eBay
+ * prices — no provider is ever asked for a value and the schema gives it
+ * nowhere to put one.
  *
- * Cost note (why the free tier is sustainable): the app uploads ≤1024px
- * ~70%-quality JPEGs, ≈1.1k image tokens + ~300 output tokens on
- * claude-haiku-4-5 ($1/$5 per MTok) ≈ £0.002/scan. Three free scans/day
- * ≈ £0.03/user/month worst case. ANTHROPIC_MODEL stays configurable so the
- * fixtures suite can confirm the cheapest model that passes before ship.
+ * VISION_PROVIDER=gemini (default): Google AI Studio free tier — £0/scan,
+ * rate-limited upstream, and Google may use free-tier inputs to improve
+ * their models (fine for boot-sale photos; revisit before any "private
+ * collection" feature). VISION_PROVIDER=anthropic: claude-haiku-4-5,
+ * ≈£0.002/scan, no training on API data. Both return the same shape and
+ * are validated by the same schema, so swapping is an env change.
  */
 export const identificationSchema = z.object({
-  name: z
-    .string()
-    .nullable()
-    .describe("Concise item name incl. brand + model when visible, e.g. 'Sony Walkman WM-EX194'. Null if no single sellable item is identifiable."),
-  brand: z.string().nullable().describe("Brand/maker if identifiable, else null"),
-  model: z.string().nullable().describe("Model number/name if visible, else null"),
-  category: z
-    .string()
-    .describe("One of: electronics, audio, gaming, tools, china_glass, records_media, toys_games, clothing, books, homeware, collectables, other"),
-  era: z.string().nullable().describe("Rough era if relevant, e.g. '1980s', else null"),
-  search_query: z
-    .string()
-    .describe("What a UK reseller would type into eBay to find this exact item: brand + model + key attribute. No condition words, no punctuation, max 8 words. Empty string if nothing identifiable."),
-  confidence: z
-    .number()
-    .describe("Honest 0-1 confidence that name identifies the specific item. Below 0.4 means guessing."),
+  name: z.string().nullable(),
+  brand: z.string().nullable(),
+  model: z.string().nullable(),
+  category: z.string(),
+  era: z.string().nullable(),
+  search_query: z.string(),
+  confidence: z.number(),
 });
 
 export type Identification = z.infer<typeof identificationSchema>;
 
-const SYSTEM_PROMPT = `You identify second-hand items photographed at UK car boot sales for resale valuation.
+export const SYSTEM_PROMPT = `You identify second-hand items photographed at UK car boot sales for resale valuation.
 
 Rules:
 - Identify the single most prominent sellable item in the photo.
@@ -45,49 +37,25 @@ Rules:
 - If there is no identifiable sellable item (blurry, empty table, a person), return name null, empty search_query, confidence 0.
 - Confidence is honest: 0.9+ only when the exact model is readable, ~0.5 when you recognise the type but not the model, below 0.4 when guessing.`;
 
-export type IdentifyFn = (imageBase64: string) => Promise<Identification>;
+/** Validate + clamp any provider's raw JSON into an Identification. */
+export function toIdentification(raw: unknown): Identification | null {
+  const parsed = identificationSchema.safeParse(raw);
+  if (!parsed.success) return null;
+  return {
+    ...parsed.data,
+    confidence: Math.min(1, Math.max(0, parsed.data.confidence)),
+  };
+}
 
-let client: Anthropic | undefined;
+export type IdentifyFn = (imageBase64: string) => Promise<Identification>;
 
 export const identifyItem: IdentifyFn = async (imageBase64) => {
   if (env.DEV_FAKE_UPSTREAMS === "1" && env.NODE_ENV === "development") {
     return FAKE_IDENTIFICATION;
   }
-  if (!env.ANTHROPIC_API_KEY) {
-    throw new UpstreamNotConfiguredError("ANTHROPIC_API_KEY");
-  }
-  client ??= new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
-
-  // One retry on schema-parse failure, per spec; structured outputs make
-  // failures rare, but a refusal or max_tokens cut can still produce null.
-  for (let attempt = 0; attempt < 2; attempt++) {
-    const response = await client.messages.parse({
-      model: env.ANTHROPIC_MODEL,
-      max_tokens: 300,
-      system: SYSTEM_PROMPT,
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "image",
-              source: { type: "base64", media_type: "image/jpeg", data: imageBase64 },
-            },
-            { type: "text", text: "Identify this item." },
-          ],
-        },
-      ],
-      output_config: { format: zodOutputFormat(identificationSchema) },
-    });
-
-    if (response.parsed_output) {
-      const id = response.parsed_output;
-      // Clamp rather than trust: numeric ranges aren't schema-enforceable.
-      return { ...id, confidence: Math.min(1, Math.max(0, id.confidence)) };
-    }
-    logger.warn({ attempt, stop: response.stop_reason }, "vision parse failed");
-  }
-  throw new Error("vision identification failed twice");
+  return env.VISION_PROVIDER === "anthropic"
+    ? identifyWithAnthropic(imageBase64)
+    : identifyWithGemini(imageBase64);
 };
 
 export class UpstreamNotConfiguredError extends Error {

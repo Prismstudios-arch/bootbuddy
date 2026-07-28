@@ -3,6 +3,7 @@ import { createApp } from "../src/app.js";
 import { createPgliteDb, setDbForTests, type Db } from "../src/db/client.js";
 import { resetRateLimits } from "../src/middleware/rate-limit.js";
 import { computeStats } from "../src/services/ebay.js";
+import { VisionBusyError } from "../src/services/vision-gemini.js";
 import { pence } from "../src/lib/money.js";
 import type { Identification } from "../src/services/vision.js";
 
@@ -242,6 +243,49 @@ describe("scan", () => {
     expect(body.scan.confidence).toBe(1);
     expect(body.scan.searchQuery).toBe("sony walkman wm-ex194 blue");
     expect(identifyCalls).toBe(1);
+  });
+
+  it("refunds the quota unit when the vision provider fails", async () => {
+    const app = createApp({
+      identify: async () => {
+        throw new VisionBusyError();
+      },
+      priceSearch: async () => PRICES,
+    });
+    const session = await signup(app);
+
+    const res = await app.request(
+      "/v1/scan",
+      authed(session.accessToken, { imageBase64: fakeImage("busy") }),
+    );
+    expect(res.status).toBe(503);
+    const body = (await res.json()) as { error: { code: string } };
+    expect(body.error.code).toBe("vision_busy");
+
+    // A failed scan must not cost the user one of their three.
+    const me = await app.request("/v1/me", {
+      headers: { authorization: `Bearer ${session.accessToken}` },
+    });
+    const { quota } = (await me.json()) as { quota: { used: number } };
+    expect(quota.used).toBe(0);
+  });
+
+  it("lists recent scans newest-first for the camera strip", async () => {
+    const app = createApp({ identify: async () => WALKMAN, priceSearch: async () => PRICES });
+    const session = await signup(app);
+    for (const seed of ["s1", "s2"]) {
+      await app.request("/v1/scan", authed(session.accessToken, { imageBase64: fakeImage(seed) }));
+    }
+
+    const res = await app.request("/v1/scan", {
+      headers: { authorization: `Bearer ${session.accessToken}` },
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { scans: { id: string; createdAt: string }[] };
+    expect(body.scans).toHaveLength(2);
+    expect(new Date(body.scans[0]!.createdAt).getTime()).toBeGreaterThanOrEqual(
+      new Date(body.scans[1]!.createdAt).getTime(),
+    );
   });
 
   it("rejects junk bodies", async () => {

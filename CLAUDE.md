@@ -35,4 +35,13 @@ packages: `app/` (Expo SDK 57, expo-router, TypeScript strict) and `server/`
 
 - Server config enters only through `server/src/env.ts` (zod-validated;
   strict in production, lenient in dev). Add new vars there + `.env.example`.
-- Vision model is `ANTHROPIC_MODEL` (default `claude-haiku-4-5`).
+- Vision is pluggable: `VISION_PROVIDER=gemini` (default, free tier) or
+  `anthropic`. Providers live in `services/vision-*.ts` and must return the
+  schema in `services/vision.ts` — validate with `toIdentification()`, never
+  trust raw provider JSON.
+- eBay and RevenueCat keys are optional: missing eBay → `askingPrices: null`
+  and the app shows "market data unavailable". Never make the server refuse
+  to boot over an optional integration.
+- App talks to the API through `app/src/lib/api.ts` only; hooks in
+  `app/src/api/` wrap it for react-query. Auth is silent (anonymous account
+  on first launch, refresh on 401) — never show a login wall.

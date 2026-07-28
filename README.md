@@ -33,6 +33,14 @@ npm run typecheck
 npm run lint
 ```
 
+The app needs to know where the API lives. `localhost` means *the phone*,
+so on a real device set your machine's LAN IP (or the deployed URL):
+
+```sh
+EXPO_PUBLIC_API_URL=http://192.168.1.42:8080 npm start   # LAN
+EXPO_PUBLIC_API_URL=https://boot-sale-buddy-api.fly.dev npm start
+```
+
 **Server** (zero setup — no Docker, no local Postgres):
 
 ```sh
@@ -101,15 +109,18 @@ Continuous deploys: set repo variable `FLY_DEPLOY_ENABLED=true` and secret
   embedding; Fontshare's licence is murkier.
 - **`@sentry/react-native`, not `sentry-expo`** (deprecated) when crash
   reporting lands in the hardening phase.
-- **Vision model:** `claude-haiku-4-5` ($1/M input tokens — a compressed
-  1024px scan is well under a penny), configurable via `ANTHROPIC_MODEL` and
-  validated against the fixture photo set before ship.
+- **Vision is provider-pluggable** via `VISION_PROVIDER`:
+  - `gemini` (default) — Google AI Studio free tier, £0/scan. Note Google
+    may train on free-tier inputs; fine for boot-sale photos, worth
+    revisiting if scan privacy ever becomes a selling point.
+  - `anthropic` — `claude-haiku-4-5`, ≈£0.002/scan, no training on API data.
+  Both return the same zod-validated shape, so switching is an env change.
 
 ## Build order
 
 1. ✅ **Foundation** — repo, design tokens, themed tab shell, server skeleton, CI
 2. ✅ **Backend core** — auth (anonymous + refresh rotation + Apple), quota-gated `/v1/scan` with Claude vision + eBay Browse, migrations, deploy pipeline (curl-tested; `fly deploy` awaits real credentials)
-3. **Scan flow** — camera → compress (≤1024px, ~70% JPEG) → upload → Result Sheet with count-up reveal + all five UI states
+3. ✅ **Scan flow** — camera → compress (≤1024px, ~70% JPEG) → upload → Result Sheet with count-up reveal, range bar, refine, and loading/error/empty/success states
 4. **Portfolio + Profit** — finds CRUD, sold flow, stats, charts, share card
 5. **Monetization** — quotas, paywall, MockPurchases/RevenueCat behind one interface, webhook
 6. **Hardening** — security checklist, Sentry, accessibility, en-GB copy pass

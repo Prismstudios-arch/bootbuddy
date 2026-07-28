@@ -94,6 +94,14 @@ function nextUkMonthStart(now: Date): Date {
  * first and refund on over-limit, which under race resolves to at most one
  * extra 429, never an extra billed scan.
  */
+/** Give back one scan unit — used when the vision call itself failed. */
+export async function refundScan(db: Db, userId: string, now = new Date()): Promise<void> {
+  await db
+    .update(schema.usage)
+    .set({ scanCount: sql`greatest(${schema.usage.scanCount} - 1, 0)` })
+    .where(and(eq(schema.usage.userId, userId), eq(schema.usage.day, ukDay(now))));
+}
+
 export async function consumeScan(
   db: Db,
   user: AuthedUser,

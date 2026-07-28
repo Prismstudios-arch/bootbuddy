@@ -5,8 +5,9 @@ import { z } from "zod";
 import { and, desc, eq, gte } from "drizzle-orm";
 import { requireAuth, type AuthEnv } from "../auth/middleware.js";
 import { getDb, schema } from "../db/client.js";
-import { consumeScan, getQuota } from "../services/quota.js";
+import { consumeScan, getQuota, refundScan } from "../services/quota.js";
 import { searchAskingPrices, type PriceSearchFn } from "../services/ebay.js";
+import { VisionBusyError } from "../services/vision-gemini.js";
 import { identifyItem, UpstreamNotConfiguredError, type IdentifyFn } from "../services/vision.js";
 
 /**
@@ -41,6 +42,19 @@ export function scanRoutes(overrides: Partial<Deps> = {}) {
   };
   return new Hono<AuthEnv>()
     .use("*", requireAuth)
+
+    /** Recent scans — powers the strip along the bottom of the camera. */
+    .get("/", async (c) => {
+      const user = c.get("user");
+      const db = await getDb();
+      const rows = await db
+        .select()
+        .from(schema.scans)
+        .where(eq(schema.scans.userId, user.id))
+        .orderBy(desc(schema.scans.createdAt))
+        .limit(20);
+      return c.json({ scans: rows.map(toScanResponse) });
+    })
 
     .post(
       "/",
@@ -92,9 +106,22 @@ export function scanRoutes(overrides: Partial<Deps> = {}) {
         try {
           identification = await deps.identify(parsed.data.imageBase64);
         } catch (err) {
+          // The scan didn't happen — give the quota unit back before failing.
+          await refundScan(db, user.id);
           if (err instanceof UpstreamNotConfiguredError) {
             return c.json(
               { error: { code: "not_configured", message: `Server missing ${err.what}.` } },
+              503,
+            );
+          }
+          if (err instanceof VisionBusyError) {
+            return c.json(
+              {
+                error: {
+                  code: "vision_busy",
+                  message: "The scanner's swamped right now — give it a minute and try again.",
+                },
+              },
               503,
             );
           }

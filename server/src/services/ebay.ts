@@ -91,6 +91,13 @@ export const searchAskingPrices: PriceSearchFn = async (query) => {
   if (env.DEV_FAKE_UPSTREAMS === "1" && env.NODE_ENV === "development") {
     return computeStats(FAKE_LISTINGS);
   }
+  // No eBay credentials yet? Identification still works; prices are null
+  // and the app shows "market data unavailable". Keeps the API deployable
+  // before the eBay developer account exists.
+  if (!env.EBAY_CLIENT_ID || !env.EBAY_CLIENT_SECRET) {
+    logger.warn({ query }, "ebay not configured — returning null prices");
+    return null;
+  }
   try {
     let res = await browseSearch(query, await getToken());
     if (res.status === 401) {

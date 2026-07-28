@@ -19,8 +19,11 @@ const base = z.object({
   // Auth — HS256 signing secret for access/refresh JWTs. 32+ bytes.
   JWT_SECRET: z.string().min(32).optional(),
 
-  // Anthropic — vision identification. Model is configurable so the fixture
-  // suite (server/fixtures) can pick the cheapest model that passes.
+  // Vision identification. gemini = Google AI Studio free tier (default);
+  // anthropic = claude-haiku-4-5. Same schema either way; swap via env.
+  VISION_PROVIDER: z.enum(["gemini", "anthropic"]).default("gemini"),
+  GEMINI_API_KEY: z.string().optional(),
+  GEMINI_MODEL: z.string().default("gemini-2.5-flash"),
   ANTHROPIC_API_KEY: z.string().startsWith("sk-ant-").optional(),
   ANTHROPIC_MODEL: z.string().default("claude-haiku-4-5"),
 
@@ -42,14 +45,13 @@ const base = z.object({
   SENTRY_DSN: z.string().url().optional(),
 });
 
-const REQUIRED_IN_PRODUCTION = [
-  "DATABASE_URL",
-  "JWT_SECRET",
-  "ANTHROPIC_API_KEY",
-  "EBAY_CLIENT_ID",
-  "EBAY_CLIENT_SECRET",
-  "REVENUECAT_WEBHOOK_AUTH",
-] as const;
+/**
+ * Hard requirements only — the app is useless without a DB, auth, or its
+ * vision provider. eBay and RevenueCat degrade gracefully when unset
+ * (prices come back null / webhook route isn't live yet), so missing keys
+ * there must not block a deploy.
+ */
+const REQUIRED_IN_PRODUCTION = ["DATABASE_URL", "JWT_SECRET"] as const;
 
 export type Env = z.infer<typeof base>;
 
@@ -64,7 +66,11 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
 
   const env = parsed.data;
   if (env.NODE_ENV === "production") {
-    const missing = REQUIRED_IN_PRODUCTION.filter((key) => env[key] === undefined);
+    const missing: string[] = REQUIRED_IN_PRODUCTION.filter((key) => env[key] === undefined);
+    if (env.VISION_PROVIDER === "gemini" && !env.GEMINI_API_KEY) missing.push("GEMINI_API_KEY");
+    if (env.VISION_PROVIDER === "anthropic" && !env.ANTHROPIC_API_KEY) {
+      missing.push("ANTHROPIC_API_KEY");
+    }
     if (missing.length > 0) {
       throw new Error(
         `Missing required production secrets: ${missing.join(", ")}\n` +
