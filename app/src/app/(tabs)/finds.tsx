@@ -1,10 +1,11 @@
-import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { FlatList, Pressable, View } from "react-native";
 import { useFinds, type Find, type FindStatus } from "@/api/finds";
 import { Celebration, isGreatFlip } from "@/components/celebration";
 import { EmptyState } from "@/components/empty-state";
+import { FindThumbnail } from "@/components/find-thumbnail";
 import { Pill } from "@/components/pill";
 import { Screen } from "@/components/screen";
 import { Skeleton } from "@/components/skeleton";
@@ -33,6 +34,7 @@ export default function FindsScreen() {
   const [filter, setFilter] = useState<Filter>("in_stock");
   const [selling, setSelling] = useState<Find | null>(null);
   const [celebrating, setCelebrating] = useState<number | null>(null);
+  const tabBarHeight = useBottomTabBarHeight();
   const finds = useFinds(filter);
 
   return (
@@ -83,7 +85,7 @@ export default function FindsScreen() {
         <FlatList
           data={finds.data}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={{ gap: space.sm, paddingBottom: space.xxl }}
+          contentContainerStyle={{ gap: space.sm, paddingBottom: tabBarHeight + space.xxl }}
           showsVerticalScrollIndicator={false}
           refreshing={finds.isFetching}
           onRefresh={() => void finds.refetch()}
@@ -180,22 +182,7 @@ function FindRow({ find, onPress }: { find: Find; onPress: () => void }) {
         padding: space.lg,
       })}
     >
-      <View
-        style={{
-          width: 44,
-          height: 44,
-          borderRadius: radius.card,
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: theme.color.surfaceRaised,
-        }}
-      >
-        <Ionicons
-          name={sold ? "checkmark-done" : "cube-outline"}
-          size={20}
-          color={sold ? theme.color.profit : theme.color.textTertiary}
-        />
-      </View>
+      <FindThumbnail findId={find.id} sold={sold} />
 
       <View style={{ flex: 1, gap: 2 }}>
         <Type variant="headline" numberOfLines={1}>

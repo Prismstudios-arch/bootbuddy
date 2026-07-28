@@ -49,7 +49,7 @@ export default function ScanScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [torch, setTorch] = useState(false);
   const [phase, setPhase] = useState<Phase>({ kind: "closed" });
-  const [buying, setBuying] = useState<Scan | null>(null);
+  const [buying, setBuying] = useState<{ scan: Scan; photoUri: string | null } | null>(null);
   const [revisiting, setRevisiting] = useState<Scan | null>(null);
   const [paywall, setPaywall] = useState(false);
   const cameraRef = useRef<CameraView>(null);
@@ -185,7 +185,7 @@ export default function ScanScreen() {
           onRetry={() => setRevisiting(null)}
           onBought={(bought) => {
             setRevisiting(null);
-            setBuying(bought);
+            setBuying({ scan: bought, photoUri: null });
           }}
         />
       ) : null}
@@ -198,13 +198,14 @@ export default function ScanScreen() {
           {...(errorMessage ? { errorMessage } : {})}
           onClose={dismiss}
           onRetry={retry}
-          onBought={(bought) => setBuying(bought)}
+          onBought={(bought) => setBuying({ scan: bought, photoUri: frozenUri })}
         />
       ) : null}
 
       {buying ? (
         <BuyLogSheet
-          scan={buying}
+          scan={buying.scan}
+          photoUri={buying.photoUri}
           onClose={() => setBuying(null)}
           onLogged={() => {
             haptic.scanDone();

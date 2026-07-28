@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { RefreshControl, ScrollView, View } from "react-native";
 import * as Sharing from "expo-sharing";
 import { captureRef } from "react-native-view-shot";
@@ -6,6 +7,7 @@ import { useStats } from "@/api/finds";
 import { Button } from "@/components/button";
 import { CountUpPrice } from "@/components/count-up";
 import { EmptyState } from "@/components/empty-state";
+import { FindThumbnail } from "@/components/find-thumbnail";
 import { ProfitChart } from "@/components/profit-chart";
 import { Screen } from "@/components/screen";
 import { ShareCard, type ShareCardData } from "@/components/share-card";
@@ -14,6 +16,7 @@ import { Type } from "@/components/type";
 import { useTheme } from "@/design/theme";
 import { radius, space } from "@/design/tokens";
 import { haptic } from "@/lib/haptics";
+import { findPhotoUri } from "@/lib/photos";
 import { formatPence } from "@/lib/money";
 
 /**
@@ -23,6 +26,9 @@ import { formatPence } from "@/lib/money";
 export default function ProfitScreen() {
   const theme = useTheme();
   const stats = useStats();
+  // Without this the last card sits under the tab bar and its button is
+  // literally cut in half.
+  const tabBarHeight = useBottomTabBarHeight();
   const shareCardRef = useRef<View>(null);
   const [sharing, setSharing] = useState(false);
 
@@ -33,6 +39,7 @@ export default function ProfitScreen() {
         boughtPricePence: best.boughtPricePence,
         soldPricePence: best.soldPricePence,
         profitPence: best.profitPence,
+        photoUri: findPhotoUri(best.id),
       }
     : null;
 
@@ -87,7 +94,7 @@ export default function ProfitScreen() {
     <Screen>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: space.xxl }}
+        contentContainerStyle={{ paddingBottom: tabBarHeight + space.xxl }}
         refreshControl={
           <RefreshControl
             refreshing={stats.isFetching}
@@ -163,10 +170,17 @@ export default function ProfitScreen() {
             <Type variant="label" tone="secondary">
               Best flip ever
             </Type>
-            <Type variant="title">{best.name}</Type>
-            <Type tone="secondary" variant="caption">
-              {formatPence(best.boughtPricePence)} → {formatPence(best.soldPricePence)}
-            </Type>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: space.md }}>
+              <FindThumbnail findId={best.id} sold size={56} />
+              <View style={{ flex: 1, gap: 2 }}>
+                <Type variant="title" numberOfLines={2}>
+                  {best.name}
+                </Type>
+                <Type tone="secondary" variant="caption">
+                  {formatPence(best.boughtPricePence)} → {formatPence(best.soldPricePence)}
+                </Type>
+              </View>
+            </View>
             <Type variant="display" tone="gold">
               {formatPence(best.profitPence)}
             </Type>

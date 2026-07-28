@@ -192,11 +192,11 @@ export const font = {
 
 export const type = {
   /** The one huge price on the result sheet / profit tab */
-  hero: { fontFamily: font.display, fontSize: 56, lineHeight: 60, letterSpacing: -1 },
+  hero: { fontFamily: font.display, fontSize: 56, lineHeight: 68, letterSpacing: -1 },
   /** Screen-level numbers and headlines */
-  display: { fontFamily: font.display, fontSize: 34, lineHeight: 38, letterSpacing: -0.5 },
+  display: { fontFamily: font.display, fontSize: 34, lineHeight: 44, letterSpacing: -0.5 },
   /** Section titles */
-  title: { fontFamily: font.displayMedium, fontSize: 22, lineHeight: 26 },
+  title: { fontFamily: font.displayMedium, fontSize: 22, lineHeight: 30 },
   /** Row titles, button labels (system semibold) */
   headline: { fontSize: 17, lineHeight: 22, fontWeight: "600" as const },
   /** Default reading text (system) */

@@ -1,3 +1,4 @@
+import { Image } from "expo-image";
 import { forwardRef } from "react";
 import { View } from "react-native";
 import { radius, space, type as typeScale } from "@/design/tokens";
@@ -18,6 +19,8 @@ export type ShareCardData = {
   boughtPricePence: number;
   soldPricePence: number;
   profitPence: number;
+  /** On-device photo of the find, if there is one. */
+  photoUri?: string | null;
 };
 
 const BG = "#121110";
@@ -43,10 +46,17 @@ export const ShareCard = forwardRef<View, { data: ShareCardData }>(function Shar
         justifyContent: "space-between",
       }}
     >
-      <View style={{ gap: space.xs }}>
+      <View style={{ gap: space.md }}>
         <Type variant="label" style={{ color: GOLD }}>
           That&rsquo;s a find
         </Type>
+        {data.photoUri ? (
+          <Image
+            source={{ uri: data.photoUri }}
+            style={{ width: "100%", height: 150, borderRadius: radius.card }}
+            contentFit="cover"
+          />
+        ) : null}
         <Type variant="title" style={{ color: TEXT }} numberOfLines={2}>
           {data.name}
         </Type>

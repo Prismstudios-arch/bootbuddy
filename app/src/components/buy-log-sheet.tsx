@@ -5,6 +5,7 @@ import type { Scan } from "@/api/scans";
 import { space } from "@/design/tokens";
 import { haptic } from "@/lib/haptics";
 import { formatPence } from "@/lib/money";
+import { saveFindPhoto } from "@/lib/photos";
 import { Button } from "./button";
 import { MoneyInput, penceFromText, textFromPence } from "./money-input";
 import { Sheet } from "./sheet";
@@ -17,10 +18,13 @@ import { Type } from "./type";
  */
 export function BuyLogSheet({
   scan,
+  photoUri,
   onClose,
   onLogged,
 }: {
   scan: Scan;
+  /** The frame that was scanned — kept on-device as the find's thumbnail. */
+  photoUri?: string | null;
   onClose: () => void;
   onLogged: () => void;
 }) {
@@ -39,7 +43,13 @@ export function BuyLogSheet({
         scanId: scan.id,
         ...(median !== null ? { estimatedValuePence: median } : {}),
       },
-      { onSuccess: onLogged, onError: () => haptic.fail() },
+      {
+        onSuccess: (data) => {
+          if (photoUri) saveFindPhoto(data.find.id, photoUri);
+          onLogged();
+        },
+        onError: () => haptic.fail(),
+      },
     );
   };
 

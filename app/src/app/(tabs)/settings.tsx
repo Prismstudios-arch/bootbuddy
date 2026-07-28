@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 import { useState } from "react";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { Alert, Pressable, ScrollView, View } from "react-native";
 import { findKeys } from "@/api/finds";
 import { scanKeys, useSession } from "@/api/scans";
@@ -35,6 +36,7 @@ const FEE_PRESETS = [10, 13, 15, 20];
 export default function SettingsScreen() {
   const queryClient = useQueryClient();
   const router = useRouter();
+  const tabBarHeight = useBottomTabBarHeight();
   const session = useSession();
   const purchases = getPurchases();
   const appearance = useAppStore((s) => s.appearance);
@@ -157,7 +159,10 @@ export default function SettingsScreen() {
 
   return (
     <Screen>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: tabBarHeight + space.lg }}
+      >
         <View style={{ paddingVertical: space.md }}>
           <Type variant="display">Settings</Type>
         </View>
