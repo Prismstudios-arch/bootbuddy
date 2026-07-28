@@ -1,22 +1,16 @@
-import { useRef, useState } from "react";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { RefreshControl, ScrollView, View } from "react-native";
-import * as Sharing from "expo-sharing";
-import { captureRef } from "react-native-view-shot";
 import { useStats } from "@/api/finds";
-import { Button } from "@/components/button";
 import { CountUpPrice } from "@/components/count-up";
 import { EmptyState } from "@/components/empty-state";
 import { FindThumbnail } from "@/components/find-thumbnail";
 import { ProfitChart } from "@/components/profit-chart";
 import { Screen } from "@/components/screen";
-import { ShareCard, type ShareCardData } from "@/components/share-card";
+import { ShareFlipButton } from "@/components/share-flip-button";
 import { Skeleton } from "@/components/skeleton";
 import { Type } from "@/components/type";
 import { useTheme } from "@/design/theme";
 import { radius, space } from "@/design/tokens";
-import { haptic } from "@/lib/haptics";
-import { findPhotoUri } from "@/lib/photos";
 import { formatPence } from "@/lib/money";
 
 /**
@@ -29,36 +23,8 @@ export default function ProfitScreen() {
   // Without this the last card sits under the tab bar and its button is
   // literally cut in half.
   const tabBarHeight = useBottomTabBarHeight();
-  const shareCardRef = useRef<View>(null);
-  const [sharing, setSharing] = useState(false);
 
   const best = stats.data?.bestFlip ?? null;
-  const shareData: ShareCardData | null = best
-    ? {
-        name: best.name,
-        boughtPricePence: best.boughtPricePence,
-        soldPricePence: best.soldPricePence,
-        profitPence: best.profitPence,
-        photoUri: findPhotoUri(best.id),
-      }
-    : null;
-
-  const share = async () => {
-    if (!shareCardRef.current) return;
-    haptic.greatFind();
-    setSharing(true);
-    try {
-      const uri = await captureRef(shareCardRef, { format: "png", quality: 1 });
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri, { mimeType: "image/png", dialogTitle: "Share your find" });
-      }
-    } catch {
-      haptic.fail();
-    } finally {
-      setSharing(false);
-    }
-  };
-
   if (stats.isPending) {
     return (
       <Screen>
@@ -185,22 +151,20 @@ export default function ProfitScreen() {
               {formatPence(best.profitPence)}
             </Type>
             <View style={{ marginTop: space.sm }}>
-              <Button
-                label={sharing ? "Preparing…" : "Share this win"}
-                onPress={() => void share()}
-                disabled={sharing}
+              <ShareFlipButton
+                find={{
+                  id: best.id,
+                  name: best.name,
+                  boughtPricePence: best.boughtPricePence,
+                  soldPricePence: best.soldPricePence,
+                  profitPence: best.profitPence,
+                }}
               />
             </View>
           </View>
         ) : null}
       </ScrollView>
 
-      {/* Rendered off-screen purely so view-shot has something to capture. */}
-      {shareData ? (
-        <View style={{ position: "absolute", left: -9999, top: 0 }} pointerEvents="none">
-          <ShareCard ref={shareCardRef} data={shareData} />
-        </View>
-      ) : null}
     </Screen>
   );
 }

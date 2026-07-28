@@ -3,13 +3,11 @@ import { useState } from "react";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { FlatList, Pressable, View } from "react-native";
 import { useFinds, type Find, type FindStatus } from "@/api/finds";
-import { Celebration, isGreatFlip } from "@/components/celebration";
 import { EmptyState } from "@/components/empty-state";
 import { FindThumbnail } from "@/components/find-thumbnail";
 import { Pill } from "@/components/pill";
 import { Screen } from "@/components/screen";
 import { Skeleton } from "@/components/skeleton";
-import { SoldSheet } from "@/components/sold-sheet";
 import { Type } from "@/components/type";
 import { useTheme } from "@/design/theme";
 import { radius, space } from "@/design/tokens";
@@ -32,8 +30,6 @@ const FILTERS: { key: Filter; label: string }[] = [
 export default function FindsScreen() {
   const router = useRouter();
   const [filter, setFilter] = useState<Filter>("in_stock");
-  const [selling, setSelling] = useState<Find | null>(null);
-  const [celebrating, setCelebrating] = useState<number | null>(null);
   const tabBarHeight = useBottomTabBarHeight();
   const finds = useFinds(filter);
 
@@ -94,31 +90,14 @@ export default function FindsScreen() {
               find={item}
               onPress={() => {
                 haptic.tap();
-                if (item.status === "in_stock") setSelling(item);
+                router.push({ pathname: "/find/[id]", params: { id: item.id } });
               }}
             />
           )}
         />
       )}
 
-      {selling ? (
-        <SoldSheet
-          find={selling}
-          onClose={() => setSelling(null)}
-          onSold={(sold) => {
-            setSelling(null);
-            void finds.refetch();
-            const profit = sold.realisedProfitPence ?? 0;
-            if (isGreatFlip(profit, sold.soldPricePence ?? 0)) {
-              setCelebrating(profit);
-            }
-          }}
-        />
-      ) : null}
 
-      {celebrating !== null ? (
-        <Celebration profitPence={celebrating} onDone={() => setCelebrating(null)} />
-      ) : null}
     </Screen>
   );
 }
@@ -171,7 +150,7 @@ function FindRow({ find, onPress }: { find: Find; onPress: () => void }) {
       accessibilityLabel={`${find.name}, paid ${formatPence(find.boughtPricePence)}${
         hasProfit ? `, ${sold ? "profit" : "estimated profit"} ${formatPence(profit)}` : ""
       }`}
-      accessibilityHint={sold ? undefined : "Opens the sold form"}
+      accessibilityHint="Opens this find"
       onPress={onPress}
       style={({ pressed }) => ({
         flexDirection: "row",
