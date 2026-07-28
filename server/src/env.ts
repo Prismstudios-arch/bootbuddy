@@ -42,6 +42,10 @@ const base = z.object({
   // RevenueCat webhook Authorization header value (configured in RC dashboard).
   REVENUECAT_WEBHOOK_AUTH: z.string().optional(),
 
+  // Comma-separated promo codes that grant lifetime Pro (App Review demo
+  // accounts, press, giveaways, on-device testing). Never in the app bundle.
+  PROMO_CODES: z.string().optional(),
+
   SENTRY_DSN: z.string().url().optional(),
 });
 

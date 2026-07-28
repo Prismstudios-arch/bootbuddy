@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 import { Pressable, ScrollView, View } from "react-native";
-import Animated, { FadeIn, SlideInDown } from "react-native-reanimated";
+import Animated, { Easing, FadeIn, SlideInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/design/theme";
-import { radius, space } from "@/design/tokens";
+import { motion, radius, space } from "@/design/tokens";
 
 const absoluteFill = { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 } as const;
 
@@ -38,8 +38,11 @@ export function Sheet({
         />
       </Animated.View>
 
+      {/* Ease-out, not a spring: a spring overshoots and reads as "bouncy",
+          which fights the design system's 200–300ms ease-out rule and makes
+          every sheet feel wobbly rather than crisp. */}
       <Animated.View
-        entering={SlideInDown.springify().damping(20).stiffness(180)}
+        entering={SlideInDown.duration(motion.base).easing(Easing.out(Easing.cubic))}
         style={{
           backgroundColor: theme.color.bg,
           borderTopLeftRadius: radius.sheet,

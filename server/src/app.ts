@@ -8,6 +8,7 @@ import { accountRoutes } from "./routes/account.js";
 import { authRoutes } from "./routes/auth.js";
 import { devRoutes } from "./routes/dev.js";
 import { findsRoutes } from "./routes/finds.js";
+import { redeemRoutes } from "./routes/redeem.js";
 import { scanRoutes } from "./routes/scan.js";
 import { webhookRoutes } from "./routes/webhooks.js";
 import type { PriceSearchFn } from "./services/ebay.js";
@@ -70,6 +71,13 @@ export function createApp(deps: AppDeps = {}) {
       .route("/", scanRoutes(deps)),
   );
   app.route("/v1/finds", findsRoutes);
+  // Brute-force protection: a promo code is a secret, so guessing must be slow.
+  app.route(
+    "/v1/redeem",
+    new Hono()
+      .use("*", rateLimit({ name: "redeem", limit: 5, windowMs: 10 * 60_000 }))
+      .route("/", redeemRoutes),
+  );
   app.route("/v1/webhooks", webhookRoutes);
   app.route("/v1", accountRoutes);
 

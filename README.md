@@ -121,6 +121,21 @@ Continuous deploys: set repo variable `FLY_DEPLOY_ENABLED=true` and secret
    enforced server-side: free = 3 scans/day (resets midnight UK), pro =
    1,000/month fair use. The client's idea of its own quota is display-only.
 
+## Promo codes
+
+`POST /v1/redeem` grants lifetime Pro for a code listed in the `PROMO_CODES`
+secret (comma-separated). Codes never appear in the app bundle, the endpoint
+is rate limited to 5 attempts per 10 minutes per IP, and it can only grant —
+never revoke, never touch another account. Use it for App Review demo
+access, press, giveaways, and testing Pro on a device against production.
+
+```sh
+fly secrets set PROMO_CODES="BOOTSALE-XXXX,PRESS-YYYY"
+```
+
+In the app: **Settings → Redeem a code**. To get back to the free tier for
+testing, use **Settings → Delete account & data** and relaunch.
+
 ## Turning on real purchases
 
 The app ships with `MockPurchases` in Expo Go (Settings → tap the version 7

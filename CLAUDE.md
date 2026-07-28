@@ -26,6 +26,15 @@ packages: `app/` (Expo SDK 57, expo-router, TypeScript strict) and `server/`
   spinners), empty (designed, with CTA), error (human copy + retry), offline
   (cached data + banner), success.
 - **Quotas are decided server-side.** Client-side `isPro` is UX sugar only.
+- **Dev-only UI is gated on `__DEV__`**, not on a comment or a promise to
+  remove it later — release bundles strip it, so it cannot ship by accident.
+  The `/v1/dev/*` routes are likewise never mounted when
+  `NODE_ENV=production`. Test Pro against production with a promo code.
+- **Sheets animate with ease-out timing, never springs.** A spring overshoots
+  and reads as "bouncy", which contradicts the 200–300ms ease-out rule.
+- **Never swallow an error into a silent state change.** A failed capture or
+  upload must surface a message; a dead button with no explanation is
+  indistinguishable from a broken app.
 - **Must keep running in Expo Go.** Anything needing native modules
   (RevenueCat, Sentry native) hides behind an interface with an Expo Go mock.
 

@@ -11,10 +11,10 @@ import { Pill } from "@/components/pill";
 import { Screen } from "@/components/screen";
 import { Type } from "@/components/type";
 import { useTheme } from "@/design/theme";
-import { API_URL, apiFetch, clearSession } from "@/lib/api";
+import { API_URL, apiFetch, ApiError, clearSession } from "@/lib/api";
 import { radius, space } from "@/design/tokens";
 import { haptic } from "@/lib/haptics";
-import { getPurchases, MockPurchases } from "@/purchases";
+import { getPurchases } from "@/purchases";
 import { useAppStore, type Appearance } from "@/state/app-store";
 
 const APPEARANCE_CYCLE: Record<Appearance, Appearance> = {
@@ -65,6 +65,68 @@ export default function SettingsScreen() {
     );
   };
 
+  /**
+   * Promo codes unlock Pro without a purchase — how App Review, press and
+   * competition winners get in, and how Pro gets tested on a real device
+   * against the live API.
+   */
+  const redeemCode = () => {
+    Alert.prompt?.(
+      "Redeem a code",
+      "Enter your Boot Sale Buddy code.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Redeem",
+          onPress: async (code?: string) => {
+            if (!code?.trim()) return;
+            try {
+              await apiFetch("/v1/redeem", {
+                method: "POST",
+                body: JSON.stringify({ code: code.trim() }),
+              });
+              refresh();
+              haptic.greatFind();
+              Alert.alert("You're in", "Buddy Pro unlocked. Scan away.");
+            } catch (error) {
+              haptic.fail();
+              Alert.alert(
+                "Couldn't redeem that",
+                error instanceof ApiError ? error.message : "Try again?",
+              );
+            }
+          },
+        },
+      ],
+      "plain-text",
+    );
+  };
+
+  /**
+   * Dev menu action. Reports failures instead of throwing into the void —
+   * the previous version let the ApiError escape as an unhandled rejection
+   * and looked like nothing had happened at all.
+   */
+  const devEntitlement = async (entitlement: "pro" | "free") => {
+    try {
+      await apiFetch("/v1/dev/entitlement", {
+        method: "POST",
+        body: JSON.stringify({ entitlement }),
+      });
+      refresh();
+      haptic.confirm();
+      Alert.alert("Done", entitlement === "pro" ? "You're Pro now." : "Back to the free plan.");
+    } catch (error) {
+      haptic.fail();
+      Alert.alert(
+        "Dev route unavailable",
+        error instanceof ApiError && error.status === 404
+          ? `The dev entitlement route isn't mounted on ${API_URL} (it never is in production). Point EXPO_PUBLIC_API_URL at a local server, or use "Redeem a code".`
+          : "Couldn't reach the dev route.",
+      );
+    }
+  };
+
   const deleteAccount = () => {
     Alert.alert(
       "Delete account and data?",
@@ -102,7 +164,7 @@ export default function SettingsScreen() {
         <Card>
           <Row
             icon="sparkles-outline"
-            label={isPro ? "Buddy Pro" : "Free plan"}
+            label={isPro ? (entitlement === "lifetime" ? "Buddy Pro · Lifetime" : "Buddy Pro") : "Free plan"}
             value={
               isPro
                 ? undefined
@@ -123,6 +185,12 @@ export default function SettingsScreen() {
           <Divider />
           {/* App Review requires Restore Purchases to be reachable. */}
           <Row icon="refresh-outline" label="Restore purchases" onPress={() => void restore()} />
+          {!isPro ? (
+            <>
+              <Divider />
+              <Row icon="ticket-outline" label="Redeem a code" onPress={redeemCode} />
+            </>
+          ) : null}
         </Card>
 
         <SectionTitle title="Preferences" />
@@ -192,30 +260,34 @@ export default function SettingsScreen() {
           </Type>
         </Pressable>
 
-        {devTaps >= 7 && purchases.isMock ? (
+        {/* __DEV__ is compiled to false in release builds, so this whole
+            block is stripped by the bundler — the dev menu physically
+            cannot ship, rather than relying on anyone remembering to
+            delete it. It also needs a local server: the entitlement route
+            it drives is not mounted in production (by design). */}
+        {__DEV__ && devTaps >= 7 && purchases.isMock ? (
           <View style={{ marginBottom: space.xxl }}>
-            <SectionTitle title="Dev menu (Expo Go)" />
+            <SectionTitle title="Dev menu (debug builds only)" />
             <Card>
               <Row
                 icon="flask-outline"
                 label="Simulate Pro"
-                onPress={async () => {
-                  await purchases.purchase("annual");
-                  refresh();
-                  haptic.confirm();
-                }}
+                onPress={() => void devEntitlement("pro")}
               />
               <Divider />
               <Row
                 icon="refresh-circle-outline"
                 label="Back to free"
-                onPress={async () => {
-                  if (purchases instanceof MockPurchases) await purchases.reset();
-                  refresh();
-                  haptic.confirm();
-                }}
+                onPress={() => void devEntitlement("free")}
               />
             </Card>
+            <Type
+              variant="caption"
+              tone="tertiary"
+              style={{ marginTop: space.sm, marginHorizontal: space.xs }}
+            >
+              Needs a local API ({API_URL}). Against production, use Redeem a code instead.
+            </Type>
           </View>
         ) : null}
       </ScrollView>

@@ -188,6 +188,60 @@ describe("dev entitlement route", () => {
   });
 });
 
+describe("promo codes", () => {
+  function redeem(app: ReturnType<typeof createApp>, token: string, code: string) {
+    return app.request("/v1/redeem", {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify({ code }),
+    });
+  }
+
+  it("grants lifetime for a valid code", async () => {
+    const app = createApp();
+    const session = await signup(app);
+    const res = await redeem(app, session.accessToken, "BOOTSALE-TEST-CODE");
+    expect(res.status).toBe(200);
+
+    const row = await entitlementOf(session.user.id);
+    expect(row?.entitlement).toBe("lifetime");
+    expect(row?.expiresAt).toBeNull();
+  });
+
+  it("accepts any configured code and rejects near-misses", async () => {
+    const app = createApp();
+    const session = await signup(app);
+    expect((await redeem(app, session.accessToken, "SECOND-CODE")).status).toBe(200);
+
+    const other = await signup(app);
+    // Right length, wrong content — the constant-time compare must still fail.
+    expect((await redeem(app, other.accessToken, "SECOND-C0DE")).status).toBe(404);
+    expect((await entitlementOf(other.user.id))?.entitlement).toBe("free");
+  });
+
+  it("requires authentication", async () => {
+    const app = createApp();
+    const res = await app.request("/v1/redeem", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ code: "BOOTSALE-TEST-CODE" }),
+    });
+    expect(res.status).toBe(401);
+  });
+
+  it("rate limits guessing", async () => {
+    const app = createApp();
+    const session = await signup(app);
+    const codes = ["a", "b", "c", "d", "e", "f"].map((c) => c.repeat(10));
+    const statuses: number[] = [];
+    for (const code of codes) {
+      statuses.push((await redeem(app, session.accessToken, code)).status);
+    }
+    // 5 attempts per 10 minutes, then the door shuts.
+    expect(statuses.filter((s) => s === 429).length).toBeGreaterThan(0);
+  });
+});
+
 describe("routing hygiene", () => {
   /**
    * Regression guard: account routes mount at the /v1 root. If their auth is

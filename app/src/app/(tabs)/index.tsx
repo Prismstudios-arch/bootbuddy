@@ -25,11 +25,23 @@ import { formatPenceCompact } from "@/lib/money";
  * camera, one unmissable shutter, torch, recent-scans strip. After the
  * shutter: freeze the frame, shimmer, then the Result Sheet slides up.
  */
+/**
+ * Explicit phases rather than deriving the sheet's state from the mutation
+ * flags. Deriving it left a gap: between opening the sheet and the mutation
+ * actually starting (photo compression takes a beat on a 12MP image) the
+ * mutation was idle — not pending, not errored, no data — so the sheet
+ * rendered as an empty box. "closed → shooting → uploading" makes that
+ * window an honest loading state.
+ */
+type Phase =
+  | { kind: "closed" }
+  | { kind: "working"; uri: string }
+  | { kind: "failed"; message: string; uri: string | null };
+
 export default function ScanScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [torch, setTorch] = useState(false);
-  const [frozenUri, setFrozenUri] = useState<string | null>(null);
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [phase, setPhase] = useState<Phase>({ kind: "closed" });
   const [buying, setBuying] = useState<Scan | null>(null);
   const [paywall, setPaywall] = useState(false);
   const cameraRef = useRef<CameraView>(null);
@@ -37,39 +49,83 @@ export default function ScanScreen() {
   const scan = useScanMutation();
   const recent = useRecentScans();
 
+  const upload = (uri: string) => {
+    setPhase({ kind: "working", uri });
+    compressForUpload(uri)
+      .then((base64) => {
+        scan.mutate(base64, {
+          onSuccess: () => haptic.scanDone(),
+          onError: (error) => {
+            // Out of scans isn't a failure — it's the upgrade moment.
+            if (error instanceof ApiError && error.isQuota) {
+              haptic.warn();
+              setPhase({ kind: "closed" });
+              setPaywall(true);
+            } else {
+              haptic.fail();
+            }
+          },
+        });
+      })
+      .catch(() => {
+        // Never swallow this silently — a dead shutter with no explanation
+        // is indistinguishable from a broken app.
+        haptic.fail();
+        setPhase({
+          kind: "failed",
+          message: "Couldn't process that photo. Give it another go?",
+          uri,
+        });
+      });
+  };
+
   const capture = async () => {
-    if (!cameraRef.current || scan.isPending) return;
+    if (!cameraRef.current || phase.kind === "working") return;
     haptic.confirm();
     try {
       const photo = await cameraRef.current.takePictureAsync({ quality: 0.9 });
-      if (!photo?.uri) return;
-      setFrozenUri(photo.uri);
-      setSheetOpen(true);
-      const base64 = await compressForUpload(photo.uri);
-      scan.mutate(base64, {
-        onSuccess: () => haptic.scanDone(),
-        onError: (error) => {
-          haptic.warn();
-          // Out of scans isn't a failure — it's the upgrade moment.
-          if (error instanceof ApiError && error.isQuota) {
-            setSheetOpen(false);
-            setFrozenUri(null);
-            setPaywall(true);
-          }
-        },
-      });
+      if (!photo?.uri) throw new Error("no photo returned");
+      upload(photo.uri);
     } catch {
       haptic.fail();
-      setFrozenUri(null);
-      setSheetOpen(false);
+      setPhase({
+        kind: "failed",
+        message: "The camera didn't catch that. Try again?",
+        uri: null,
+      });
     }
   };
 
   const dismiss = () => {
-    setSheetOpen(false);
-    setFrozenUri(null);
+    setPhase({ kind: "closed" });
     scan.reset();
   };
+
+  const retry = () => {
+    const uri = phase.kind === "failed" ? phase.uri : phase.kind === "working" ? phase.uri : null;
+    if (uri) {
+      scan.reset();
+      upload(uri);
+    } else {
+      dismiss();
+    }
+  };
+
+  const sheetOpen = phase.kind !== "closed";
+  const frozenUri = phase.kind === "closed" ? null : phase.uri;
+  // The sheet is loading from the instant it opens until the API answers.
+  const sheetState =
+    phase.kind === "failed" || scan.isError
+      ? "error"
+      : scan.isSuccess
+        ? "success"
+        : "loading";
+  const errorMessage =
+    phase.kind === "failed"
+      ? phase.message
+      : scan.error instanceof ApiError
+        ? scan.error.message
+        : undefined;
 
   if (!permission) {
     return <CameraBooting />;
@@ -102,23 +158,18 @@ export default function ScanScreen() {
             setTorch((t) => !t);
           }}
           onCapture={capture}
-          busy={scan.isPending}
           recentScans={recent.data ?? []}
         />
       ) : null}
 
       {sheetOpen ? (
         <ResultSheet
-          state={scan.isPending ? "loading" : scan.isError ? "error" : "success"}
+          state={sheetState}
           {...(scan.data?.scan ? { scan: scan.data.scan } : {})}
           {...(scan.data?.quota ? { quota: scan.data.quota } : {})}
-          {...(scan.error instanceof ApiError ? { errorMessage: scan.error.message } : {})}
+          {...(errorMessage ? { errorMessage } : {})}
           onClose={dismiss}
-          onRetry={() => {
-            if (frozenUri) {
-              void compressForUpload(frozenUri).then((b64) => scan.mutate(b64));
-            }
-          }}
+          onRetry={retry}
           onBought={(bought) => setBuying(bought)}
         />
       ) : null}
@@ -148,17 +199,17 @@ export default function ScanScreen() {
   );
 }
 
+/** Only rendered while the sheet is closed, so the shutter is never busy —
+ *  the Result Sheet owns the loading state once a capture is under way. */
 function CameraControls({
   torch,
   onToggleTorch,
   onCapture,
-  busy,
   recentScans,
 }: {
   torch: boolean;
   onToggleTorch: () => void;
   onCapture: () => void;
-  busy: boolean;
   recentScans: Scan[];
 }) {
   const theme = useTheme();
@@ -228,9 +279,7 @@ function CameraControls({
           accessibilityRole="button"
           accessibilityLabel="Scan item"
           accessibilityHint="Takes a photo and looks up what it sells for"
-          accessibilityState={{ busy }}
           onPress={onCapture}
-          disabled={busy}
           style={{
             width: 76,
             height: 76,
@@ -241,18 +290,14 @@ function CameraControls({
             justifyContent: "center",
           }}
         >
-          {busy ? (
-            <ActivityIndicator color="#F5F2ED" />
-          ) : (
-            <View
-              style={{
-                width: 60,
-                height: 60,
-                borderRadius: radius.pill,
-                backgroundColor: "#F5F2ED",
-              }}
-            />
-          )}
+          <View
+            style={{
+              width: 60,
+              height: 60,
+              borderRadius: radius.pill,
+              backgroundColor: "#F5F2ED",
+            }}
+          />
         </Pressable>
 
         <View style={{ width: 48 }} />
