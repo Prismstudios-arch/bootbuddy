@@ -15,10 +15,13 @@ const absoluteFill = { position: "absolute", top: 0, left: 0, right: 0, bottom: 
 export function Sheet({
   onClose,
   children,
+  footer,
   maxHeightPercent = 88,
 }: {
   onClose: () => void;
   children: ReactNode;
+  /** Pinned below the scroll area — for a CTA that must never scroll away. */
+  footer?: ReactNode;
   maxHeightPercent?: number;
 }) {
   const theme = useTheme();
@@ -69,6 +72,19 @@ export function Sheet({
         >
           {children}
         </ScrollView>
+        {footer ? (
+          <View
+            style={{
+              paddingHorizontal: space.gutter,
+              paddingTop: space.md,
+              borderTopWidth: 1,
+              borderTopColor: theme.color.border,
+              gap: space.sm,
+            }}
+          >
+            {footer}
+          </View>
+        ) : null}
       </Animated.View>
     </View>
   );

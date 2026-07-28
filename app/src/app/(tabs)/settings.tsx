@@ -1,9 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
 import Constants from "expo-constants";
-import * as Linking from "expo-linking";
 import { useState } from "react";
-import { Alert, Linking as RNLinking, Pressable, ScrollView, View } from "react-native";
+import { Alert, Pressable, ScrollView, View } from "react-native";
 import { findKeys } from "@/api/finds";
 import { scanKeys, useSession } from "@/api/scans";
 import { Paywall } from "@/components/paywall";
@@ -14,6 +13,7 @@ import { useTheme } from "@/design/theme";
 import { API_URL, apiFetch, ApiError, clearSession } from "@/lib/api";
 import { radius, space } from "@/design/tokens";
 import { haptic } from "@/lib/haptics";
+import { openAppleSubscriptions, openSupportEmail, openUrl } from "@/lib/links";
 import { getPurchases } from "@/purchases";
 import { useAppStore, type Appearance } from "@/state/app-store";
 
@@ -176,7 +176,7 @@ export default function SettingsScreen() {
             onPress={() => {
               haptic.tap();
               if (isPro) {
-                void RNLinking.openURL("https://apps.apple.com/account/subscriptions");
+                void openAppleSubscriptions();
               } else {
                 setPaywall(true);
               }
@@ -222,21 +222,19 @@ export default function SettingsScreen() {
           <Row
             icon="lock-closed-outline"
             label="Privacy Policy"
-            onPress={() => void RNLinking.openURL(`${API_URL}/privacy`)}
+            onPress={() => void openUrl(`${API_URL}/privacy`)}
           />
           <Divider />
           <Row
             icon="document-text-outline"
             label="Terms of Use"
-            onPress={() => void RNLinking.openURL(`${API_URL}/terms`)}
+            onPress={() => void openUrl(`${API_URL}/terms`)}
           />
           <Divider />
           <Row
             icon="mail-outline"
             label="Support"
-            onPress={() =>
-              void Linking.openURL("mailto:support@bootsalebuddy.app?subject=Boot%20Sale%20Buddy")
-            }
+            onPress={() => void openSupportEmail()}
           />
         </Card>
 

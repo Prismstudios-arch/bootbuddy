@@ -43,6 +43,7 @@ export default function ScanScreen() {
   const [torch, setTorch] = useState(false);
   const [phase, setPhase] = useState<Phase>({ kind: "closed" });
   const [buying, setBuying] = useState<Scan | null>(null);
+  const [revisiting, setRevisiting] = useState<Scan | null>(null);
   const [paywall, setPaywall] = useState(false);
   const cameraRef = useRef<CameraView>(null);
 
@@ -159,6 +160,23 @@ export default function ScanScreen() {
           }}
           onCapture={capture}
           recentScans={recent.data ?? []}
+          onOpenRecent={(item) => {
+            haptic.tap();
+            setRevisiting(item);
+          }}
+        />
+      ) : null}
+
+      {revisiting ? (
+        <ResultSheet
+          state="success"
+          scan={revisiting}
+          onClose={() => setRevisiting(null)}
+          onRetry={() => setRevisiting(null)}
+          onBought={(bought) => {
+            setRevisiting(null);
+            setBuying(bought);
+          }}
         />
       ) : null}
 
@@ -206,11 +224,13 @@ function CameraControls({
   onToggleTorch,
   onCapture,
   recentScans,
+  onOpenRecent,
 }: {
   torch: boolean;
   onToggleTorch: () => void;
   onCapture: () => void;
   recentScans: Scan[];
+  onOpenRecent: (scan: Scan) => void;
 }) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
@@ -234,20 +254,25 @@ function CameraControls({
           contentContainerStyle={{ paddingHorizontal: space.gutter, gap: space.sm }}
         >
           {recentScans.slice(0, 8).map((item) => (
-            <View
+            <Pressable
               key={item.id}
-              style={{
-                backgroundColor: "rgba(18,17,16,0.72)",
+              accessibilityRole="button"
+              accessibilityLabel={`Reopen ${item.name ?? "unknown item"}`}
+              accessibilityHint="Shows what this scan was worth"
+              onPress={() => onOpenRecent(item)}
+              style={({ pressed }) => ({
+                backgroundColor: pressed ? "rgba(61,220,132,0.25)" : "rgba(18,17,16,0.72)",
                 borderRadius: radius.pill,
                 paddingVertical: space.xs,
                 paddingHorizontal: space.md,
-              }}
+                maxWidth: 220,
+              })}
             >
               <Type variant="caption" style={{ color: "#F5F2ED" }} numberOfLines={1}>
                 {item.name ?? "Unknown"}
                 {item.askingPrices ? ` · ${formatPenceCompact(item.askingPrices.medianPence)}` : ""}
               </Type>
-            </View>
+            </Pressable>
           ))}
         </ScrollView>
       ) : null}
@@ -349,7 +374,7 @@ function PermissionGate({ canAsk, onAsk }: { canAsk: boolean; onAsk: () => void 
       </View>
       <Button
         label={canAsk ? "Allow camera" : "Open Settings"}
-        onPress={canAsk ? onAsk : () => void Linking.openSettings()}
+        onPress={canAsk ? onAsk : () => void Linking.openSettings().catch(() => undefined)}
       />
     </Screen>
   );

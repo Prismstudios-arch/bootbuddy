@@ -1,10 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
-import { Linking, Pressable, TextInput, View } from "react-native";
+import { Pressable, TextInput, View } from "react-native";
 import { useRefineMutation, type Quota, type Scan } from "@/api/scans";
 import { useTheme } from "@/design/theme";
 import { radius, space } from "@/design/tokens";
 import { haptic } from "@/lib/haptics";
+import { openUrl } from "@/lib/links";
 import { formatPence } from "@/lib/money";
 import { Button } from "./button";
 import { CountUpPrice } from "./count-up";
@@ -236,7 +237,7 @@ function SuccessBody({
               variant="ghost"
               onPress={() => {
                 haptic.tap();
-                void Linking.openURL(
+                void openUrl(
                   `https://www.vinted.co.uk/catalog?search_text=${encodeURIComponent(current.searchQuery)}`,
                 );
               }}
@@ -248,17 +249,22 @@ function SuccessBody({
       {quota ? (
         <View style={{ alignItems: "center" }}>
           <Pill
-            label={
-              quota.limit - quota.used > 0
-                ? `${quota.limit - quota.used} scans left today`
-                : "No scans left today"
-            }
+            label={quotaLabel(quota)}
             tone={quota.limit - quota.used > 0 ? "neutral" : "gold"}
           />
         </View>
       ) : null}
     </View>
   );
+}
+
+/** "2 scans left today" for free, "this month" for Pro — the pill must not
+ *  claim a daily reset when the quota is monthly. */
+function quotaLabel(quota: Quota): string {
+  const left = Math.max(0, quota.limit - quota.used);
+  const window = quota.period === "day" ? "today" : "this month";
+  if (left === 0) return `No scans left ${window}`;
+  return `${left} ${left === 1 ? "scan" : "scans"} left ${window}`;
 }
 
 /** Honest confidence, in plain English rather than a percentage. */

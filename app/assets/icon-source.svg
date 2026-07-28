@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!--
+    Boot Sale Buddy app icon — source of truth.
+    Regenerate the PNGs with: npm run icons  (scripts/generate-icons.mjs)
+
+    Concept: a price tag examined through a magnifying glass — the whole
+    product in one mark. Warm gold on warm near-black, taken straight from
+    the design tokens so the icon and the app are visibly the same thing.
+
+    Legibility at 60px drove every decision: two shapes, one accent colour,
+    thick strokes, and a dark "moat" around the lens so the glass reads as
+    being in front of the tag instead of merging with it. The glass sits on
+    the tag's corner rather than its middle, so the tag stays a recognisable
+    silhouette rather than a shape with a bite out of it.
+  -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0%" stop-color="#221F1C"/>
+      <stop offset="100%" stop-color="#121110"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0.1" y1="0" x2="0.9" y2="1">
+      <stop offset="0%" stop-color="#F5D089"/>
+      <stop offset="50%" stop-color="#E8B14E"/>
+      <stop offset="100%" stop-color="#C2882B"/>
+    </linearGradient>
+    <!-- Dark gap that separates the lens from the tag behind it. -->
+    <mask id="tagMask">
+      <rect width="1024" height="1024" fill="white"/>
+      <circle cx="648" cy="652" r="212" fill="black"/>
+    </mask>
+  </defs>
+
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+
+  <!-- Price tag: rounded square on the diagonal, with the eyelet punched. -->
+  <g mask="url(#tagMask)">
+    <g transform="rotate(-45 432 424)">
+      <rect x="242" y="234" width="380" height="380" rx="64" fill="url(#gold)"/>
+      <circle cx="330" cy="322" r="40" fill="#171512"/>
+    </g>
+  </g>
+
+  <!-- Magnifying glass, same gold, sitting over the tag's lower corner. -->
+  <g stroke="url(#gold)" fill="none" stroke-linecap="round">
+    <circle cx="648" cy="652" r="146" stroke-width="58"/>
+    <line x1="756" y1="758" x2="852" y2="854" stroke-width="66"/>
+  </g>
+</svg>

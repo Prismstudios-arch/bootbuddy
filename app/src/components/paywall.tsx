@@ -1,12 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Linking, Pressable, View } from "react-native";
+import { Pressable, View } from "react-native";
 import { scanKeys } from "@/api/scans";
 import { findKeys } from "@/api/finds";
 import { useTheme } from "@/design/theme";
 import { radius, space } from "@/design/tokens";
 import { haptic } from "@/lib/haptics";
+import { openUrl } from "@/lib/links";
+import { API_URL } from "@/lib/api";
 import { getPurchases, type Offering, type PackageId } from "@/purchases";
 import { Button } from "./button";
 import { Pill } from "./pill";
@@ -87,8 +89,72 @@ export function Paywall({
     }
   };
 
+  const footer = (
+    <>
+      <Button
+        label={
+          busy
+            ? "One moment…"
+            : chosen?.trialDays
+              ? `Start ${chosen.trialDays}-day free trial`
+              : "Get Buddy Pro"
+        }
+        onPress={() => void buy()}
+        disabled={busy || offerings.length === 0}
+      />
+
+      {message ? (
+        <Type variant="caption" tone="loss" style={{ textAlign: "center" }}>
+          {message}
+        </Type>
+      ) : null}
+
+      {/* App Review requires the terms next to the buy button. */}
+      <Type variant="caption" tone="tertiary" style={{ textAlign: "center", lineHeight: 17 }}>
+        {chosen?.id === "lifetime"
+          ? "One-off payment. No subscription, nothing to cancel."
+          : `${chosen?.priceLabel ?? ""} ${chosen?.periodLabel ?? ""}, auto-renewing until cancelled.${
+              chosen?.trialDays
+                ? ` Free for ${chosen.trialDays} days, then billed unless you cancel at least 24 hours before it ends.`
+                : ""
+            } Cancel any time in your Apple ID settings.`}
+      </Type>
+
+      <View style={{ flexDirection: "row", justifyContent: "center", gap: space.lg }}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Restore purchases"
+          onPress={() => void restore()}
+          disabled={busy}
+        >
+          <Type variant="caption" tone="secondary">
+            Restore purchases
+          </Type>
+        </Pressable>
+        <Pressable
+          accessibilityRole="link"
+          accessibilityLabel="Terms of use"
+          onPress={() => void openUrl(`${API_URL}/terms`)}
+        >
+          <Type variant="caption" tone="secondary">
+            Terms
+          </Type>
+        </Pressable>
+        <Pressable
+          accessibilityRole="link"
+          accessibilityLabel="Privacy policy"
+          onPress={() => void openUrl(`${API_URL}/privacy`)}
+        >
+          <Type variant="caption" tone="secondary">
+            Privacy
+          </Type>
+        </Pressable>
+      </View>
+    </>
+  );
+
   return (
-    <Sheet onClose={onClose}>
+    <Sheet onClose={onClose} footer={footer}>
       <View style={{ gap: space.lg }}>
         <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
           <View style={{ flex: 1, gap: space.xs }}>
@@ -139,65 +205,6 @@ export function Paywall({
           ))}
         </View>
 
-        <Button
-          label={
-            busy
-              ? "One moment…"
-              : chosen?.trialDays
-                ? `Start ${chosen.trialDays}-day free trial`
-                : "Get Buddy Pro"
-          }
-          onPress={() => void buy()}
-          disabled={busy || offerings.length === 0}
-        />
-
-        {message ? (
-          <Type variant="caption" tone="loss" style={{ textAlign: "center" }}>
-            {message}
-          </Type>
-        ) : null}
-
-        {/* App Review requires the terms next to the buy button. */}
-        <Type variant="caption" tone="tertiary" style={{ textAlign: "center", lineHeight: 17 }}>
-          {chosen?.id === "lifetime"
-            ? "One-off payment. No subscription, nothing to cancel."
-            : `${chosen?.priceLabel ?? ""} ${chosen?.periodLabel ?? ""}, auto-renewing until cancelled.${
-                chosen?.trialDays
-                  ? ` Free for ${chosen.trialDays} days, then billed unless you cancel at least 24 hours before it ends.`
-                  : ""
-              } Cancel any time in your Apple ID settings.`}
-        </Type>
-
-        <View style={{ flexDirection: "row", justifyContent: "center", gap: space.lg }}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Restore purchases"
-            onPress={() => void restore()}
-            disabled={busy}
-          >
-            <Type variant="caption" tone="secondary">
-              Restore purchases
-            </Type>
-          </Pressable>
-          <Pressable
-            accessibilityRole="link"
-            accessibilityLabel="Terms of use"
-            onPress={() => void Linking.openURL("https://boot-sale-buddy-api.fly.dev/terms")}
-          >
-            <Type variant="caption" tone="secondary">
-              Terms
-            </Type>
-          </Pressable>
-          <Pressable
-            accessibilityRole="link"
-            accessibilityLabel="Privacy policy"
-            onPress={() => void Linking.openURL("https://boot-sale-buddy-api.fly.dev/privacy")}
-          >
-            <Type variant="caption" tone="secondary">
-              Privacy
-            </Type>
-          </Pressable>
-        </View>
       </View>
     </Sheet>
   );
