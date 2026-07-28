@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRecentScans, useScanMutation, type Scan } from "@/api/scans";
 import { BuyLogSheet } from "@/components/buy-log-sheet";
 import { Button } from "@/components/button";
+import { Paywall } from "@/components/paywall";
 import { Pill } from "@/components/pill";
 import { ResultSheet } from "@/components/result-sheet";
 import { Screen } from "@/components/screen";
@@ -30,6 +31,7 @@ export default function ScanScreen() {
   const [frozenUri, setFrozenUri] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [buying, setBuying] = useState<Scan | null>(null);
+  const [paywall, setPaywall] = useState(false);
   const cameraRef = useRef<CameraView>(null);
 
   const scan = useScanMutation();
@@ -46,7 +48,15 @@ export default function ScanScreen() {
       const base64 = await compressForUpload(photo.uri);
       scan.mutate(base64, {
         onSuccess: () => haptic.scanDone(),
-        onError: () => haptic.fail(),
+        onError: (error) => {
+          haptic.warn();
+          // Out of scans isn't a failure — it's the upgrade moment.
+          if (error instanceof ApiError && error.isQuota) {
+            setSheetOpen(false);
+            setFrozenUri(null);
+            setPaywall(true);
+          }
+        },
       });
     } catch {
       haptic.fail();
@@ -121,6 +131,16 @@ export default function ScanScreen() {
             haptic.scanDone();
             setBuying(null);
             dismiss();
+          }}
+        />
+      ) : null}
+
+      {paywall ? (
+        <Paywall
+          reason="quota"
+          onClose={() => {
+            setPaywall(false);
+            scan.reset();
           }}
         />
       ) : null}

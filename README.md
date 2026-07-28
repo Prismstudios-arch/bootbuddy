@@ -103,6 +103,23 @@ Continuous deploys: set repo variable `FLY_DEPLOY_ENABLED=true` and secret
    enforced server-side: free = 3 scans/day (resets midnight UK), pro =
    1,000/month fair use. The client's idea of its own quota is display-only.
 
+## Turning on real purchases
+
+The app ships with `MockPurchases` in Expo Go (Settings → tap the version 7
+times for a dev menu that upgrades and downgrades you against the real
+server). To go live with actual money:
+
+1. RevenueCat dashboard: create the `pro` entitlement and the `$rc_monthly`
+   / `$rc_annual` / `$rc_lifetime` packages.
+2. Point its webhook at `POST https://boot-sale-buddy-api.fly.dev/v1/webhooks/revenuecat`
+   with the Authorization header set to the `REVENUECAT_WEBHOOK_AUTH` secret
+   (`fly secrets list` shows it's set; `fly ssh console` or re-set it to read it back).
+3. `EXPO_PUBLIC_REVENUECAT_IOS_KEY=...` and build with EAS.
+
+No app code changes — `getPurchases()` selects the real provider
+automatically outside Expo Go. **Only the webhook can grant Pro**; the app
+claiming an entitlement is never trusted.
+
 ## Decisions that differ from the original brief (and why)
 
 - **Expo SDK 57, not 54.** The Expo Go app in the stores only runs the
@@ -127,7 +144,7 @@ Continuous deploys: set repo variable `FLY_DEPLOY_ENABLED=true` and secret
 2. ✅ **Backend core** — auth (anonymous + refresh rotation + Apple), quota-gated `/v1/scan` with Claude vision + eBay Browse, migrations, deploy pipeline (curl-tested; `fly deploy` awaits real credentials)
 3. ✅ **Scan flow** — camera → compress (≤1024px, ~70% JPEG) → upload → Result Sheet with count-up reveal, range bar, refine, and loading/error/empty/success states
 4. ✅ **Portfolio + Profit** — finds CRUD, two-tap buy log, sold flow with fee estimation, stats aggregates, six-month chart, share card
-5. **Monetization** — quotas, paywall, MockPurchases/RevenueCat behind one interface, webhook
+5. ✅ **Monetization** — server-side quotas, paywall, MockPurchases/RevenueCat behind one interface, RevenueCat webhook
 6. **Hardening** — security checklist, Sentry, accessibility, en-GB copy pass
 7. **Ship prep** — EAS build, TestFlight, screenshots, privacy labels, submit
 
