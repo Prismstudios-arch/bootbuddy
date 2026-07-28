@@ -530,110 +530,207 @@ function screenPaywall() {
 }
 
 // ---------------------------------------------------------------------------
-// Frame: caption + device
+// Composition
+//
+// Three layouts, deliberately mixed. Nine identical centred-device shots
+// read as a template no matter how good the app is; varying the rhythm is
+// what makes a listing look considered. The device bleeds off the bottom
+// so the screen is big enough to actually read at thumbnail size, and two
+// shots crop hard into a single number instead — those are the moments
+// worth enlarging.
 // ---------------------------------------------------------------------------
-function compose({ caption, sub, screen, accent = C.gold, tint = "#17150F" }) {
-  const captionLines = caption.split("\n");
-  let head = "";
-  captionLines.forEach((line, i) => {
-    head += text(W / 2, 250 + i * 92, line, {
-      size: 76,
-      weight: 700,
-      anchor: "middle",
-      fill: C.text,
-    });
-  });
-  if (sub) {
-    head += text(W / 2, 250 + captionLines.length * 92 + 24, sub, {
-      size: 34,
-      anchor: "middle",
-      fill: accent,
-    });
-  }
+const DEV_W = 1010;
+const DEV_SCALE = DEV_W / SW;
+const DEV_H = SH * DEV_SCALE;
+const DEV_X = (W - DEV_W) / 2;
+const DEV_Y = 900;
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+function background(accent, tint) {
+  return `
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="0.3" y2="1">
+    <linearGradient id="bg" x1="0.1" y1="0" x2="0.7" y2="1">
       <stop offset="0%" stop-color="${tint}"/>
-      <stop offset="60%" stop-color="${C.bg}"/>
-      <stop offset="100%" stop-color="#0A0908"/>
+      <stop offset="45%" stop-color="${C.bg}"/>
+      <stop offset="100%" stop-color="#080706"/>
     </linearGradient>
     <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0%" stop-color="${accent}" stop-opacity="0.20"/>
-      <stop offset="55%" stop-color="${accent}" stop-opacity="0.07"/>
+      <stop offset="0%" stop-color="${accent}" stop-opacity="0.30"/>
+      <stop offset="45%" stop-color="${accent}" stop-opacity="0.10"/>
       <stop offset="100%" stop-color="${accent}" stop-opacity="0"/>
     </radialGradient>
+    <linearGradient id="rule" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="${accent}" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="${accent}" stop-opacity="0"/>
+    </linearGradient>
     <clipPath id="screenClip">
-      <rect x="${SX}" y="${SY}" width="${SW}" height="${SH}" rx="64"/>
+      <rect x="${DEV_X}" y="${DEV_Y}" width="${DEV_W}" height="${DEV_H}" rx="72"/>
+    </clipPath>
+    <clipPath id="zoomClip">
+      <rect x="70" y="900" width="${W - 140}" height="1500" rx="56"/>
     </clipPath>
   </defs>
   <rect width="${W}" height="${H}" fill="url(#bg)"/>
-  <ellipse cx="${W / 2}" cy="200" rx="760" ry="620" fill="url(#glow)"/>
-  ${head}
-  <rect x="${SX - 26}" y="${SY - 26}" width="${SW + 52}" height="${SH + 52}" rx="90" fill="#000000" opacity="0.9"/>
-  <rect x="${SX - 26}" y="${SY - 26}" width="${SW + 52}" height="${SH + 52}" rx="90" fill="none" stroke="#3A3530" stroke-width="4"/>
-  <g clip-path="url(#screenClip)"><g transform="translate(${SX}, ${SY})">${screen}</g></g>
+  <ellipse cx="${W * 0.5}" cy="620" rx="900" ry="760" fill="url(#glow)"/>`;
+}
+
+/** Caption block: big, tight, left-aligned with an accent rule above it. */
+function caption(lines, sub, accent) {
+  let out = rect(96, 210, 150, 10, { r: 5, fill: "url(#rule)" });
+  let y = 360;
+  for (const line of lines) {
+    out += text(96, y, line, { size: 104, weight: 800, fill: C.text, spacing: -2 });
+    y += 118;
+  }
+  if (sub) {
+    out += text(96, y + 6, sub, { size: 38, weight: 500, fill: accent });
+  }
+  return out;
+}
+
+/** Layout A — phone bleeding off the bottom edge. */
+function deviceShot({ screen, float = "" }) {
+  return `
+  <rect x="${DEV_X - 22}" y="${DEV_Y - 22}" width="${DEV_W + 44}" height="${DEV_H + 44}" rx="94" fill="#000000"/>
+  <rect x="${DEV_X - 22}" y="${DEV_Y - 22}" width="${DEV_W + 44}" height="${DEV_H + 44}" rx="94" fill="none" stroke="#403A34" stroke-width="5"/>
+  <g clip-path="url(#screenClip)">
+    <g transform="translate(${DEV_X}, ${DEV_Y}) scale(${DEV_SCALE})">${screen}</g>
+  </g>
+  ${float}`;
+}
+
+/**
+ * Layout B — crop hard into one region of the same screen mock. Reusing the
+ * mock rather than drawing a bespoke card keeps the crop honest: it is
+ * literally the same pixels, just nearer.
+ */
+function zoomShot({ screen, focusX, focusY, scale }) {
+  const boxX = 70;
+  const boxY = 900;
+  const boxW = W - 140;
+  const boxH = 1500;
+  const tx = boxX + boxW / 2 - focusX * scale;
+  const ty = boxY + boxH / 2 - focusY * scale;
+  return `
+  <rect x="${boxX}" y="${boxY}" width="${boxW}" height="${boxH}" rx="56" fill="${C.bg}"/>
+  <g clip-path="url(#zoomClip)">
+    <g transform="translate(${tx}, ${ty}) scale(${scale})">${screen}</g>
+  </g>
+  <rect x="${boxX}" y="${boxY}" width="${boxW}" height="${boxH}" rx="56" fill="none" stroke="#3A3530" stroke-width="4"/>`;
+}
+
+/** Layout C — the share card, tilted, as an object in its own right. */
+function cardShot({ screen }) {
+  return `
+  <g transform="translate(${W / 2}, 1720) rotate(-5) translate(${-SW * 0.55}, ${-1951 * 0.42})">
+    <g transform="scale(1.1)">
+      <rect x="-20" y="-20" width="${SW + 40}" height="${1951 * 0.86}" rx="56" fill="#000000" opacity="0.55"/>
+      <g clip-path="url(#screenClip)"></g>
+      ${screen}
+    </g>
+  </g>`;
+}
+
+/** A floating stat chip that sits outside the phone for emphasis. */
+function floatChip(x, y, big, small, accent) {
+  const w = 470;
+  const h = 190;
+  return (
+    `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="36" fill="${C.surface}" stroke="${accent}" stroke-width="4"/>` +
+    label(x + 40, y + 62, small, accent) +
+    text(x + 40, y + 146, big, { size: 76, weight: 800, fill: accent })
+  );
+}
+
+function compose(shot) {
+  const accent = shot.accent ?? C.gold;
+  const tint = shot.tint ?? "#1A160E";
+  const lines = shot.caption.split("|");
+  let body;
+  if (shot.layout === "zoom") {
+    body = zoomShot(shot);
+  } else if (shot.layout === "card") {
+    body = cardShot(shot);
+  } else {
+    body = deviceShot(shot);
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+${background(accent, tint)}
+${caption(lines, shot.sub, accent)}
+${body}
 </svg>`;
 }
 
 const SHOTS = [
   {
     file: "01-scan.png",
-    caption: "Know what it's worth\nbefore you buy",
-    sub: "Point your camera at anything on the table",
+    caption: "Know what|it's worth",
+    sub: "Before you hand over the 50p",
     screen: screenScan(),
   },
   {
     file: "02-result.png",
-    caption: "A price in seconds,\nnot a guess",
-    sub: "Live asking prices, honestly labelled",
+    caption: "A price in|seconds",
+    sub: "Not a guess, not a gut feeling",
     screen: resultSheet(),
+    float: floatChip(760, 700, "£28.50", "Median", C.gold),
   },
   {
     file: "03-maxbuy.png",
-    caption: "Know your\nwalk-away price",
-    sub: "Fees and postage already accounted for",
+    caption: "Know when|to walk away",
+    sub: "Fees and postage already taken off",
     accent: C.profit,
-    tint: "#0E1A13",
+    tint: "#0C1C13",
+    layout: "zoom",
     screen: resultSheet({ highlightMaxBuy: true }),
+    focusX: SW / 2,
+    focusY: 1230,
+    scale: 1.24,
   },
   {
     file: "04-buylog.png",
-    caption: "Log the buy\nin two taps",
+    caption: "Logged in|two taps",
     sub: "Built for cold hands and bad signal",
     screen: screenBuyLog(),
   },
   {
     file: "05-finds.png",
-    caption: "Your whole haul,\nin one place",
+    caption: "Your whole|haul",
     sub: "In stock, sold, and what you're up",
     accent: C.profit,
-    tint: "#0E1A13",
+    tint: "#0C1C13",
     screen: screenFinds(),
   },
   {
     file: "06-detail.png",
-    caption: "Every penny\naccounted for",
+    caption: "Every penny|accounted for",
     sub: "See exactly what the fees took",
+    layout: "zoom",
     screen: screenDetail(),
+    focusX: SW / 2,
+    focusY: 1180,
+    scale: 1.24,
   },
   {
     file: "07-profit.png",
-    caption: "Watch the profit\nstack up",
+    caption: "Watch it|stack up",
     sub: "Your finds, tracked like a portfolio",
     accent: C.profit,
-    tint: "#0E1A13",
+    tint: "#0C1C13",
     screen: screenProfit(),
+    float: floatChip(740, 660, "+£318", "This month", C.profit),
   },
   {
     file: "08-share.png",
-    caption: "Share the wins",
+    caption: "Share|the wins",
     sub: "50p to £42 deserves an audience",
-    screen: screenShare(),
+    accent: C.profit,
+    tint: "#0C1C13",
+    screen: screenProfit(),
+    float: floatChip(700, 640, "£32.55", "Best flip", C.gold),
   },
   {
     file: "09-paywall.png",
-    caption: "Less than one\ngood flip a year",
+    caption: "Less than one|good flip",
     sub: "£12.99 a year · 7-day free trial",
     screen: screenPaywall(),
   },
@@ -645,4 +742,5 @@ for (const shot of SHOTS) {
   writeFileSync(join(outDir, shot.file), png);
   console.log(`wrote ${shot.file} (${(png.length / 1024).toFixed(0)}KB)`);
 }
-console.log(`\n9 screenshots at ${W}×${H} in assets/screenshots/`);
+console.log(`
+9 screenshots at ${W}×${H} in assets/screenshots/`);
