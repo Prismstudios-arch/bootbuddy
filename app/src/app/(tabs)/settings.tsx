@@ -12,11 +12,13 @@ import { Pill } from "@/components/pill";
 import { Screen } from "@/components/screen";
 import { Type } from "@/components/type";
 import { useTheme } from "@/design/theme";
-import { API_URL, apiFetch, ApiError, clearSession } from "@/lib/api";
+import { API_URL, apiFetch, apiFetchText, ApiError, clearSession } from "@/lib/api";
 import { radius, space } from "@/design/tokens";
 import { haptic } from "@/lib/haptics";
 import { openAppleSubscriptions, openSupportEmail } from "@/lib/links";
 import { getPurchases } from "@/purchases";
+import { Directory, File, Paths } from "expo-file-system";
+import * as Sharing from "expo-sharing";
 import { useAppStore, type Appearance } from "@/state/app-store";
 
 const APPEARANCE_CYCLE: Record<Appearance, Appearance> = {
@@ -45,6 +47,7 @@ export default function SettingsScreen() {
   const setFeePercent = useAppStore((s) => s.setDefaultFeePercent);
   const [paywall, setPaywall] = useState(false);
   const [devTaps, setDevTaps] = useState(0);
+  const [exporting, setExporting] = useState(false);
 
   const entitlement = session.data?.user.entitlement ?? "free";
   const isPro = entitlement !== "free";
@@ -131,6 +134,50 @@ export default function SettingsScreen() {
     }
   };
 
+  /**
+   * CSV export — advertised on the paywall, so it has to actually work.
+   * Writes to the cache directory (the OS can reclaim it) and hands it to
+   * the share sheet, which is how someone gets it to email, Files or
+   * their accountant.
+   */
+  const exportCsv = async () => {
+    if (!isPro) {
+      haptic.warn();
+      setPaywall(true);
+      return;
+    }
+    haptic.tap();
+    setExporting(true);
+    try {
+      const csv = await apiFetchText("/v1/finds/export");
+      const folder = new Directory(Paths.cache, "exports");
+      if (!folder.exists) folder.create({ intermediates: true });
+      const file = new File(folder, `boot-sale-buddy-${new Date().toISOString().slice(0, 10)}.csv`);
+      if (file.exists) file.delete();
+      file.create();
+      file.write(csv);
+
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(file.uri, {
+          mimeType: "text/csv",
+          UTI: "public.comma-separated-values-text",
+          dialogTitle: "Export your finds",
+        });
+      } else {
+        Alert.alert("Saved", "Your export is ready but this device can't open the share sheet.");
+      }
+      haptic.confirm();
+    } catch (error) {
+      haptic.fail();
+      Alert.alert(
+        "Couldn't export",
+        error instanceof ApiError ? error.message : "Something went wrong. Try again?",
+      );
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const deleteAccount = () => {
     Alert.alert(
       "Delete account and data?",
@@ -210,6 +257,13 @@ export default function SettingsScreen() {
               haptic.confirm();
               setAppearance(APPEARANCE_CYCLE[appearance]);
             }}
+          />
+          <Divider />
+          <Row
+            icon="download-outline"
+            label={exporting ? "Preparing export…" : "Export finds (CSV)"}
+            {...(isPro ? {} : { trailing: <Pill label="Pro" tone="gold" /> })}
+            onPress={() => void exportCsv()}
           />
           <Divider />
           <Row

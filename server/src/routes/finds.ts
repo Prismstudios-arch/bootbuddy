@@ -3,6 +3,7 @@ import { z } from "zod";
 import { and, desc, eq } from "drizzle-orm";
 import { requireAuth, type AuthEnv } from "../auth/middleware.js";
 import { getDb, schema } from "../db/client.js";
+import { isoToDate, penceToDecimal, toCsv } from "../lib/csv.js";
 import { realisedProfit, unrealisedProfit } from "../lib/profit.js";
 
 /**
@@ -54,6 +55,72 @@ export const findsRoutes = new Hono<AuthEnv>()
       .where(where)
       .orderBy(desc(schema.finds.createdAt));
     return c.json({ finds: rows.map(toFindResponse) });
+  })
+
+  /**
+   * CSV export — a Pro feature, so the entitlement is checked here rather
+   * than trusted from the client. Sellers use this for their tax return, so
+   * it includes every field that matters to one and none that don't.
+   */
+  .get("/export", async (c) => {
+    const user = c.get("user");
+    const isPro =
+      user.entitlement === "lifetime" ||
+      (user.entitlement === "pro" &&
+        (user.entitlementExpiresAt === null || user.entitlementExpiresAt.getTime() > Date.now()));
+
+    if (!isPro) {
+      return c.json(
+        {
+          error: {
+            code: "pro_required",
+            message: "CSV export is a Buddy Pro feature.",
+          },
+        },
+        403,
+      );
+    }
+
+    const db = await getDb();
+    const rows = await db
+      .select()
+      .from(schema.finds)
+      .where(eq(schema.finds.userId, user.id))
+      .orderBy(desc(schema.finds.boughtAt));
+
+    const csv = toCsv(
+      [
+        "Item",
+        "Status",
+        "Bought date",
+        "Bought price (GBP)",
+        "Estimated value (GBP)",
+        "Sold date",
+        "Sold price (GBP)",
+        "Selling fees (GBP)",
+        "Postage (GBP)",
+        "Profit (GBP)",
+        "Notes",
+      ],
+      rows.map((find) => [
+        find.name,
+        find.status === "sold" ? "Sold" : "In stock",
+        isoToDate(find.boughtAt),
+        penceToDecimal(find.boughtPricePence),
+        penceToDecimal(find.estimatedValuePence),
+        isoToDate(find.soldAt),
+        penceToDecimal(find.soldPricePence),
+        find.status === "sold" ? penceToDecimal(find.feesPence) : "",
+        find.status === "sold" ? penceToDecimal(find.postagePence) : "",
+        penceToDecimal(realisedProfit(find)),
+        find.notes,
+      ]),
+    );
+
+    const filename = `boot-sale-buddy-${new Date().toISOString().slice(0, 10)}.csv`;
+    c.header("Content-Type", "text/csv; charset=utf-8");
+    c.header("Content-Disposition", `attachment; filename="${filename}"`);
+    return c.body(csv);
   })
 
   .post("/", async (c) => {

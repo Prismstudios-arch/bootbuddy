@@ -160,6 +160,31 @@ export async function apiFetch<T>(
   return body as T;
 }
 
+/**
+ * Same auth handling as apiFetch, but for endpoints that return something
+ * other than JSON (the CSV export). Kept separate rather than adding a flag
+ * so the common path stays typed as JSON.
+ */
+export async function apiFetchText(path: string): Promise<string> {
+  const token = await ensureAccessToken();
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}`, { headers: { authorization: `Bearer ${token}` } });
+  } catch {
+    throw new ApiError(0, "offline", "Couldn't reach the shops. Check your signal?");
+  }
+  if (!res.ok) {
+    const body: unknown = await res.json().catch(() => null);
+    const err = (body as { error?: { code?: string; message?: string } } | null)?.error;
+    throw new ApiError(
+      res.status,
+      err?.code ?? "unknown",
+      err?.message ?? "Something went wrong. Try again?",
+    );
+  }
+  return res.text();
+}
+
 /** Settings → Delete account, and the dev menu's "reset device account". */
 export async function clearSession(): Promise<void> {
   accessToken = null;
