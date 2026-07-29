@@ -14,12 +14,17 @@ import { Pill } from "./pill";
 import { Sheet } from "./sheet";
 import { Type } from "./type";
 
+/**
+ * Only things that actually exist and are actually Pro-only. The list used
+ * to promise "custom fee presets" — which every free user already has — and
+ * an "app icon pack" that was never built. Charging for either would be a
+ * straightforward misrepresentation, and App Review checks paywall claims.
+ */
 const FEATURES = [
   { icon: "infinite", text: "Unlimited scans — no counting" },
   { icon: "download-outline", text: "CSV export for your tax return" },
-  { icon: "options-outline", text: "Custom fee presets per platform" },
-  { icon: "notifications-outline", text: "Price-drop watchlist (coming soon)" },
-  { icon: "color-palette-outline", text: "App icon pack" },
+  { icon: "cloud-upload-outline", text: "Your whole haul, backed up" },
+  { icon: "heart-outline", text: "Keeps a one-man app running" },
 ] as const;
 
 /**

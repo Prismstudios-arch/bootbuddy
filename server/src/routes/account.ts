@@ -16,7 +16,7 @@ export const accountRoutes = new Hono<AuthEnv>()
     const user = c.get("user");
     const db = await getDb();
     return c.json({
-      user: { id: user.id, entitlement: user.entitlement },
+      user: { id: user.id, entitlement: user.entitlement, signedIn: user.signedIn },
       quota: await getQuota(db, user),
     });
   })

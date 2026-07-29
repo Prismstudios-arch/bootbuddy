@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
 import Constants from "expo-constants";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, Pressable, ScrollView, View } from "react-native";
 import { findKeys } from "@/api/finds";
 import { scanKeys, useSession } from "@/api/scans";
@@ -11,7 +11,15 @@ import { Pill } from "@/components/pill";
 import { Screen } from "@/components/screen";
 import { Type } from "@/components/type";
 import { useTheme } from "@/design/theme";
-import { API_URL, apiFetch, apiFetchText, ApiError, clearSession } from "@/lib/api";
+import {
+  API_URL,
+  apiFetch,
+  apiFetchText,
+  ApiError,
+  clearSession,
+  currentAccessToken,
+} from "@/lib/api";
+import { isAppleSignInAvailable, signInWithApple } from "@/lib/apple-auth";
 import { radius, space } from "@/design/tokens";
 import { haptic } from "@/lib/haptics";
 import { useTabBarHeight } from "@/lib/tab-bar";
@@ -48,8 +56,15 @@ export default function SettingsScreen() {
   const [paywall, setPaywall] = useState(false);
   const [devTaps, setDevTaps] = useState(0);
   const [exporting, setExporting] = useState(false);
+  const [appleAvailable, setAppleAvailable] = useState(false);
+  const [signingIn, setSigningIn] = useState(false);
+
+  useEffect(() => {
+    void isAppleSignInAvailable().then(setAppleAvailable);
+  }, []);
 
   const entitlement = session.data?.user.entitlement ?? "free";
+  const signedIn = session.data?.user.signedIn ?? false;
   const isPro = entitlement !== "free";
   const quota = session.data?.quota;
 
@@ -176,6 +191,27 @@ export default function SettingsScreen() {
     } finally {
       setExporting(false);
     }
+  };
+
+  /**
+   * Everything runs on an anonymous device account, which means deleting
+   * the app loses months of profit history. Signing in links that same
+   * account to an Apple ID rather than starting a fresh one, so nothing
+   * logged before signing in is lost.
+   */
+  const signIn = async () => {
+    setSigningIn(true);
+    const outcome = await signInWithApple(await currentAccessToken());
+    setSigningIn(false);
+    if (outcome.status === "signed_in") {
+      haptic.confirm();
+      refresh();
+      Alert.alert("Signed in", "Your finds are backed up to your Apple ID now.");
+    } else if (outcome.status === "error") {
+      haptic.fail();
+      Alert.alert("Couldn't sign in", outcome.message);
+    }
+    // Cancelled is the user's business — say nothing.
   };
 
   const deleteAccount = () => {
@@ -307,8 +343,35 @@ export default function SettingsScreen() {
 
         <SectionTitle title="Account" />
         <Card>
+          {signedIn ? (
+            <Row
+              icon="checkmark-circle-outline"
+              label="Signed in with Apple"
+              value="Backed up"
+              onPress={() => haptic.tap()}
+            />
+          ) : appleAvailable ? (
+            <Row
+              icon="logo-apple"
+              label={signingIn ? "Signing in…" : "Sign in with Apple"}
+              value="Back up your finds"
+              onPress={() => void signIn()}
+            />
+          ) : null}
+          {signedIn || appleAvailable ? <Divider /> : null}
           <Row icon="trash-outline" label="Delete account & data" destructive onPress={deleteAccount} />
         </Card>
+
+        {!signedIn && appleAvailable ? (
+          <Type
+            variant="caption"
+            tone="tertiary"
+            style={{ marginTop: space.sm, marginHorizontal: space.xs }}
+          >
+            Your finds live on this device&rsquo;s account. Sign in and they&rsquo;re tied to your
+            Apple ID instead, so a new phone doesn&rsquo;t mean starting over.
+          </Type>
+        ) : null}
 
         {/* Tap the version seven times for the dev menu (Expo Go only). */}
         <Pressable

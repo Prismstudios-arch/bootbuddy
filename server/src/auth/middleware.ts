@@ -7,6 +7,8 @@ export type AuthedUser = {
   id: string;
   entitlement: "free" | "pro" | "lifetime";
   entitlementExpiresAt: Date | null;
+  /** Linked to an Apple ID, so the account survives a reinstall. */
+  signedIn: boolean;
 };
 
 export type AuthEnv = { Variables: { user: AuthedUser; requestId: string } };
@@ -34,6 +36,7 @@ export const requireAuth = createMiddleware<AuthEnv>(async (c, next) => {
       id: schema.users.id,
       entitlement: schema.users.entitlement,
       entitlementExpiresAt: schema.users.entitlementExpiresAt,
+      appleSub: schema.users.appleSub,
       deletedAt: schema.users.deletedAt,
     })
     .from(schema.users)
@@ -51,6 +54,7 @@ export const requireAuth = createMiddleware<AuthEnv>(async (c, next) => {
     id: user.id,
     entitlement: user.entitlement,
     entitlementExpiresAt: user.entitlementExpiresAt,
+    signedIn: user.appleSub !== null,
   });
   await next();
 });

@@ -50,7 +50,10 @@ export function useRecentScans() {
 export function useSession() {
   return useQuery({
     queryKey: scanKeys.me,
-    queryFn: () => apiFetch<{ user: { id: string; entitlement: string }; quota: Quota }>("/v1/me"),
+    queryFn: () => apiFetch<{
+      user: { id: string; entitlement: string; signedIn: boolean };
+      quota: Quota;
+    }>("/v1/me"),
   });
 }
 

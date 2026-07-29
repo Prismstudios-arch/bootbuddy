@@ -185,6 +185,26 @@ export async function apiFetchText(path: string): Promise<string> {
   return res.text();
 }
 
+/**
+ * Adopt a session issued by another flow (Sign in with Apple). Replaces the
+ * anonymous one in place, so the app carries straight on with the same
+ * account the server just linked.
+ */
+export async function setSession(access: string, refresh: string): Promise<void> {
+  await store.set(ACCESS_KEY, access);
+  await store.set(REFRESH_KEY, refresh);
+  accessToken = access;
+}
+
+/** The current access token, for flows that must present it themselves. */
+export async function currentAccessToken(): Promise<string | null> {
+  try {
+    return await ensureAccessToken();
+  } catch {
+    return null;
+  }
+}
+
 /** Settings → Delete account, and the dev menu's "reset device account". */
 export async function clearSession(): Promise<void> {
   accessToken = null;
