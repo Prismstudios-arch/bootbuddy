@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { env } from "../env.js";
 import { logger } from "../logger.js";
+import { VisionUnreadableError } from "./vision-gemini.js";
 import {
   identificationSchema,
   SYSTEM_PROMPT,
@@ -47,5 +48,5 @@ export async function identifyWithAnthropic(imageBase64: string): Promise<Identi
     if (identification) return identification;
     logger.warn({ attempt, stop: response.stop_reason }, "anthropic vision parse failed");
   }
-  throw new Error("anthropic identification failed twice");
+  throw new VisionUnreadableError();
 }

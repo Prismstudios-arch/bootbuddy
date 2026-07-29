@@ -13,9 +13,13 @@ primary_region = "lhr"
 [http_service]
   internal_port = 8080
   force_https = true
-  auto_stop_machines = "off"   # autoscale off initially, per ops checklist
+  # One machine while there are no users — two roughly doubles the bill for
+  # zero-downtime deploys nobody is around to notice. Put this back to 2
+  # (and run `fly scale count 2`) before launch, when a few seconds of
+  # downtime during a deploy starts to matter.
+  auto_stop_machines = "stop"  # sleeps when idle, wakes on request
   auto_start_machines = true
-  min_machines_running = 2     # zero-downtime rolling deploys
+  min_machines_running = 1
 
   [[http_service.checks]]
     interval = "15s"

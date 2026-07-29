@@ -7,7 +7,7 @@ import { requireAuth, type AuthEnv } from "../auth/middleware.js";
 import { getDb, schema } from "../db/client.js";
 import { consumeScan, getQuota, refundScan } from "../services/quota.js";
 import { lookupPrices, type PriceLookup } from "../services/pricing.js";
-import { VisionBusyError } from "../services/vision-gemini.js";
+import { VisionBusyError, VisionUnreadableError } from "../services/vision-gemini.js";
 import { identifyItem, UpstreamNotConfiguredError, type IdentifyFn } from "../services/vision.js";
 
 /**
@@ -112,6 +112,17 @@ export function scanRoutes(overrides: Partial<Deps> = {}) {
             return c.json(
               { error: { code: "not_configured", message: `Server missing ${err.what}.` } },
               503,
+            );
+          }
+          if (err instanceof VisionUnreadableError) {
+            return c.json(
+              {
+                error: {
+                  code: "unreadable_image",
+                  message: "That photo didn't come out. Get a bit closer and try again?",
+                },
+              },
+              422,
             );
           }
           if (err instanceof VisionBusyError) {

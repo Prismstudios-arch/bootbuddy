@@ -93,12 +93,24 @@ export async function identifyWithGemini(imageBase64: string): Promise<Identific
     }
     logger.warn({ attempt, finish: json.candidates?.[0]?.finishReason }, "gemini parse failed");
   }
-  throw new Error("gemini identification failed twice");
+  throw new VisionUnreadableError();
 }
 
 /** Free-tier RPM exhausted — the route turns this into a friendly 503. */
 export class VisionBusyError extends Error {
   constructor() {
     super("vision provider is rate limited");
+  }
+}
+
+/**
+ * The provider couldn't make anything of the image — corrupt bytes, an
+ * unsupported format, or a frame so poor it refused. That's a retryable
+ * user-side problem, not a server fault, so it must not surface as a 500
+ * telling someone "something went wrong on our end".
+ */
+export class VisionUnreadableError extends Error {
+  constructor() {
+    super("vision provider could not read the image");
   }
 }

@@ -3,7 +3,7 @@ import { createApp } from "../src/app.js";
 import { createPgliteDb, setDbForTests, type Db } from "../src/db/client.js";
 import { resetRateLimits } from "../src/middleware/rate-limit.js";
 import { computeStats } from "../src/services/ebay.js";
-import { VisionBusyError } from "../src/services/vision-gemini.js";
+import { VisionBusyError, VisionUnreadableError } from "../src/services/vision-gemini.js";
 import { pence } from "../src/lib/money.js";
 import type { Identification } from "../src/services/vision.js";
 
@@ -344,5 +344,34 @@ describe("eBay stats", () => {
   it("returns null when nothing survives the filters", () => {
     expect(computeStats([gbp("2.00", "faulty broken for parts")])).toBeNull();
     expect(computeStats([])).toBeNull();
+  });
+});
+
+describe("unreadable photos", () => {
+  it("returns a friendly 422 and refunds the quota, never a 500", async () => {
+    const app = createApp({
+      identify: async () => {
+        throw new VisionUnreadableError();
+      },
+      priceSearch: async () => PRICES,
+    });
+    const session = await signup(app);
+
+    const res = await app.request(
+      "/v1/scan",
+      authed(session.accessToken, { imageBase64: fakeImage("corrupt") }),
+    );
+    // A photo the model can't read is the user's problem to retry — telling
+    // them "something went wrong on our end" is both wrong and useless.
+    expect(res.status).toBe(422);
+    const body = (await res.json()) as { error: { code: string; message: string } };
+    expect(body.error.code).toBe("unreadable_image");
+    expect(body.error.message).toContain("try again");
+
+    const me = await app.request("/v1/me", {
+      headers: { authorization: `Bearer ${session.accessToken}` },
+    });
+    const { quota } = (await me.json()) as { quota: { used: number } };
+    expect(quota.used).toBe(0);
   });
 });
