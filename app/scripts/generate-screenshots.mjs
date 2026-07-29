@@ -103,13 +103,14 @@ try {
  * body, window with two spools, transport buttons, headphone lead.
  */
 function walkman(x, y, w, opts = {}) {
+  const radius = opts.r;
   // Portrait by default with a real photo: boxed items are taller than
   // they are wide, and slicing one to landscape crops off the label,
   // which is the part that makes it recognisable.
   const h = opts.h ?? (ITEM_PHOTO ? w * 1.24 : w * 0.72);
   const k = w / 300; // everything scales off a 300-wide reference
   if (ITEM_PHOTO) {
-    return `<image href="${ITEM_PHOTO}" x="${x}" y="${y}" width="${w}" height="${h}" preserveAspectRatio="xMidYMid slice" clip-path="inset(0 round ${16 * k})"/>`;
+    return `<image href="${ITEM_PHOTO}" x="${x}" y="${y}" width="${w}" height="${h}" preserveAspectRatio="xMidYMid slice" clip-path="inset(0 round ${radius ?? 16 * k})"/>`;
   }
   const cx = x + w / 2;
   const cy = y + h / 2;
@@ -138,10 +139,14 @@ function walkman(x, y, w, opts = {}) {
   );
 }
 
-/** Thumbnail-sized item artwork with a soft backing. */
+/**
+ * Square thumbnail. Fills its tile and centre-crops, rather than being
+ * letterboxed into a strip — a portrait photo squeezed into a landscape
+ * box shows almost nothing of the item.
+ */
 const photo = (x, y, size, r = 18) =>
   `<rect x="${x}" y="${y}" width="${size}" height="${size}" rx="${r}" fill="#2A2520"/>` +
-  walkman(x + size * 0.08, y + size * 0.22, size * 0.84, { h: size * 0.6 });
+  walkman(x, y, size, { h: size, r });
 
 const rect = (x, y, w, h, o = {}) =>
   `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${o.r ?? 0}" fill="${o.fill ?? C.surface}"${o.stroke ? ` stroke="${o.stroke}" stroke-width="${o.sw ?? 2}"` : ""}${o.opacity ? ` opacity="${o.opacity}"` : ""}/>`;
@@ -479,9 +484,9 @@ function screenProfit() {
   s +=
     rect(56, y, SW - 112, 250, { r: 24, fill: C.surface }) +
     label(96, y + 56, "Best flip ever") +
-    photo(96, y + 84, 100) +
-    text(224, y + 128, "Corsair Vengeance RGB", { size: 30, weight: 600 }) +
-    text(224, y + 172, "£5.00 → £42.00", { size: 26, fill: C.muted }) +
+    photo(96, y + 76, 116) +
+    text(240, y + 128, "Corsair Vengeance RGB", { size: 30, weight: 600 }) +
+    text(240, y + 172, "£5.00 → £42.00", { size: 26, fill: C.muted }) +
     text(SW - 96, y + 158, "£28.05", { size: 52, weight: 700, fill: C.gold, anchor: "end" });
 
   return s + tabBar("Profit");
@@ -497,7 +502,7 @@ function screenShare() {
   s += rect(cx, cy, cw, ch, { r: 32, fill: "#0E0D0C" });
   s += label(cx + 60, cy + 100, "That's a find", C.gold);
   s += rect(cx + 60, cy + 140, cw - 120, 420, { r: 20, fill: "#2A2420" });
-  s += walkman(cx + cw / 2 - 170, cy + 200, 340);
+  s += walkman(cx + cw / 2 - 160, cy + 150, 320, { h: 400, r: 16 });
   s += text(cx + 60, cy + 640, "Corsair Vengeance RGB Pro", { size: 38, weight: 700 });
   s += text(cx + 60, cy + 720, "Found for £5.00  →  Sold for £42.00", {
     size: 28,
@@ -670,11 +675,11 @@ function heroBreakdown() {
   const x = CARD_X + PAD;
   const w = CARD_W - PAD * 2;
   let y = CARD_Y + 140;
-  let s = photo(x, y, 150, 30);
-  s += pill(x + 196, y + 10, "Sold", { bg: C.profitBg, fg: C.profit });
-  s += text(x + 196, y + 136, "Corsair Vengeance RGB", { size: 46, weight: 700 });
+  let s = photo(x, y, 190, 30);
+  s += pill(x + 236, y + 16, "Sold", { bg: C.profitBg, fg: C.profit });
+  s += text(x + 236, y + 146, "Corsair Vengeance RGB", { size: 44, weight: 700 });
 
-  y += 250;
+  y += 260;
   s += rect(x, y, w, 2, { fill: C.border });
 
   y += 120;
@@ -903,8 +908,7 @@ const SHOTS = [
     sub: "A fiver to £42 deserves an audience",
     accent: C.profit,
     tint: "#0C1C13",
-    screen: screenProfit(),
-    float: floatChip(700, 640, "£28.05", "Best flip", C.gold),
+    screen: screenShare(),
   },
   {
     file: "09-paywall.png",
