@@ -12,6 +12,8 @@ export type Find = {
   boughtPricePence: number;
   boughtAt: string;
   estimatedValuePence: number | null;
+  /** When the estimate was last refreshed, so the UI can flag stale ones. */
+  valuedAt: string | null;
   soldPricePence: number | null;
   feesPence: number;
   postagePence: number;
@@ -111,6 +113,22 @@ export function useUpdateFind(id: string) {
       apiFetch<{ find: Find }>(`/v1/finds/${id}`, {
         method: "PATCH",
         body: JSON.stringify(input),
+      }),
+    onSuccess: invalidate,
+  });
+}
+
+/**
+ * Re-price everything in stock. Only items with a live price source
+ * actually move — records and CDs today — so the response reports what was
+ * updated versus skipped rather than implying the whole portfolio is fresh.
+ */
+export function useRevalue() {
+  const invalidate = useFindInvalidation();
+  return useMutation({
+    mutationFn: () =>
+      apiFetch<{ updated: number; skipped: number; checked: number }>("/v1/finds/revalue", {
+        method: "POST",
       }),
     onSuccess: invalidate,
   });

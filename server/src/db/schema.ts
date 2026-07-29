@@ -88,6 +88,10 @@ export const finds = pgTable(
     // Estimated resale value at time of logging (median asking price) so the
     // portfolio can show unrealised profit without re-querying eBay.
     estimatedValuePence: integer("estimated_value_pence"),
+    // When that estimate was last refreshed. An unrealised profit figure
+    // from six months ago is a guess wearing a number's clothes, so the UI
+    // says how stale it is rather than presenting it as current.
+    valuedAt: timestamp("valued_at", { withTimezone: true }),
     soldPricePence: integer("sold_price_pence"),
     feesPence: integer("fees_pence").notNull().default(0),
     postagePence: integer("postage_pence").notNull().default(0),

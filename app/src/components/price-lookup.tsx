@@ -53,6 +53,12 @@ const DESTINATIONS: Destination[] = [
     url: (q) => `https://www.vinted.co.uk/catalog?search_text=${encodeURIComponent(q)}`,
   },
   {
+    key: "amazon",
+    label: "Amazon UK",
+    icon: "cube-outline",
+    url: (q) => `https://www.amazon.co.uk/s?k=${encodeURIComponent(q)}`,
+  },
+  {
     key: "google",
     label: "Google Shopping",
     icon: "search-outline",

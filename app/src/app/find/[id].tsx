@@ -201,6 +201,20 @@ export default function FindDetailScreen() {
 }
 
 /**
+ * "checked today" / "checked 3 weeks ago" — an unrealised figure from
+ * months back is a guess wearing a number's clothes, so say how old it is.
+ */
+function valuedAgo(valuedAt: string | null): string {
+  if (!valuedAt) return "";
+  const days = Math.floor((Date.now() - new Date(valuedAt).getTime()) / 86_400_000);
+  if (days <= 0) return ", checked today";
+  if (days === 1) return ", checked yesterday";
+  if (days < 14) return `, checked ${days} days ago`;
+  if (days < 60) return `, checked ${Math.floor(days / 7)} weeks ago`;
+  return `, checked ${Math.floor(days / 30)} months ago`;
+}
+
+/**
  * Where the money actually went. A single profit number hides the story;
  * this shows the fees and postage that ate into it.
  */
@@ -266,7 +280,9 @@ function ProfitBreakdown({ find }: { find: Find }) {
 
       {!sold ? (
         <Type variant="caption" tone="tertiary">
-          An estimate from asking prices — before fees and postage.
+          {find.estimatedValuePence === null
+            ? "No live price for this one — check it yourself from a scan."
+            : `An estimate before fees and postage${valuedAgo(find.valuedAt)}. Pull to refresh on My Finds to re-check.`}
         </Type>
       ) : null}
     </View>

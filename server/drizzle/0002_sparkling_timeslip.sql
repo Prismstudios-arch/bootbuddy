@@ -1,0 +1,1 @@
+ALTER TABLE "finds" ADD COLUMN "valued_at" timestamp with time zone;

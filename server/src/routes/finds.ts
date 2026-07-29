@@ -5,6 +5,7 @@ import { requireAuth, type AuthEnv } from "../auth/middleware.js";
 import { getDb, schema } from "../db/client.js";
 import { isoToDate, penceToDecimal, toCsv } from "../lib/csv.js";
 import { realisedProfit, unrealisedProfit } from "../lib/profit.js";
+import { lookupPrices } from "../services/pricing.js";
 
 /**
  * Portfolio CRUD. A "find" is something you actually bought — created by
@@ -12,6 +13,13 @@ import { realisedProfit, unrealisedProfit } from "../lib/profit.js";
  * free forever; only scanning is metered).
  */
 const moneyPence = z.number().int().min(0).max(100_000_00);
+
+/**
+ * Cap on one revalue pass. Each item costs upstream API calls, and Discogs
+ * rate limits at 60 requests a minute — a 200-item portfolio would blow
+ * straight through it and get everything throttled.
+ */
+const MAX_REVALUE = 25;
 
 const createBody = z.object({
   name: z.string().trim().min(1).max(120),
@@ -123,6 +131,64 @@ export const findsRoutes = new Hono<AuthEnv>()
     return c.body(csv);
   })
 
+  /**
+   * Re-price everything still in stock.
+   *
+   * A find's estimated value is captured when it's logged and then never
+   * moves, so a portfolio slowly drifts away from reality — which matters,
+   * because unrealised profit is the number people look at to decide what
+   * to list next. This refreshes those estimates from the live price
+   * sources.
+   *
+   * Only items we have a live source for actually change: today that means
+   * records and CDs via Discogs. Everything else keeps the value it had and
+   * is reported as skipped, rather than being silently zeroed or left
+   * looking freshly checked when it wasn't.
+   */
+  .post("/revalue", async (c) => {
+    const user = c.get("user");
+    const db = await getDb();
+
+    const rows = await db
+      .select({
+        id: schema.finds.id,
+        name: schema.finds.name,
+        estimatedValuePence: schema.finds.estimatedValuePence,
+        query: schema.scans.searchQuery,
+        category: schema.scans.category,
+      })
+      .from(schema.finds)
+      .leftJoin(schema.scans, eq(schema.finds.scanId, schema.scans.id))
+      .where(and(eq(schema.finds.userId, user.id), eq(schema.finds.status, "in_stock")))
+      .limit(MAX_REVALUE);
+
+    let updated = 0;
+    let skipped = 0;
+    const now = new Date();
+
+    for (const row of rows) {
+      // Fall back to the item name for finds logged by hand, which have no
+      // scan behind them.
+      const query = row.query ?? row.name;
+      const prices = query ? await lookupPrices(query, row.category ?? undefined) : null;
+      if (!prices) {
+        skipped += 1;
+        continue;
+      }
+      await db
+        .update(schema.finds)
+        .set({
+          estimatedValuePence: prices.medianPence,
+          valuedAt: now,
+          updatedAt: now,
+        })
+        .where(eq(schema.finds.id, row.id));
+      updated += 1;
+    }
+
+    return c.json({ updated, skipped, checked: rows.length });
+  })
+
   .post("/", async (c) => {
     const parsed = createBody.safeParse(await c.req.json().catch(() => null));
     if (!parsed.success) {
@@ -141,6 +207,7 @@ export const findsRoutes = new Hono<AuthEnv>()
         userId: user.id,
         ...rest,
         ...(boughtAt ? { boughtAt: new Date(boughtAt) } : {}),
+        ...(rest.estimatedValuePence !== undefined ? { valuedAt: new Date() } : {}),
       })
       .returning();
     if (!find) throw new Error("find insert returned nothing");
@@ -223,6 +290,7 @@ export function toFindResponse(find: FindRow) {
     boughtPricePence: find.boughtPricePence,
     boughtAt: find.boughtAt.toISOString(),
     estimatedValuePence: find.estimatedValuePence,
+    valuedAt: find.valuedAt?.toISOString() ?? null,
     soldPricePence: find.soldPricePence,
     feesPence: find.feesPence,
     postagePence: find.postagePence,

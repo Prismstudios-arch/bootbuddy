@@ -1,7 +1,7 @@
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { FlatList, Pressable, View } from "react-native";
-import { useFinds, type Find, type FindStatus } from "@/api/finds";
+import { useFinds, useRevalue, type Find, type FindStatus } from "@/api/finds";
 import { BackupPrompt } from "@/components/backup-prompt";
 import { EmptyState } from "@/components/empty-state";
 import { OfflineBanner } from "@/components/offline-banner";
@@ -34,6 +34,7 @@ export default function FindsScreen() {
   const [filter, setFilter] = useState<Filter>("in_stock");
   const tabBarHeight = useTabBarHeight();
   const finds = useFinds(filter);
+  const revalue = useRevalue();
 
   return (
     <Screen>
@@ -88,8 +89,12 @@ export default function FindsScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ gap: space.sm, paddingBottom: tabBarHeight + space.xxl }}
           showsVerticalScrollIndicator={false}
-          refreshing={finds.isFetching}
-          onRefresh={() => void finds.refetch()}
+          refreshing={finds.isFetching || revalue.isPending}
+          onRefresh={() => {
+            // Pull-to-refresh re-prices the portfolio, not just re-reads it.
+            haptic.tap();
+            revalue.mutate(undefined, { onSettled: () => void finds.refetch() });
+          }}
           renderItem={({ item }) => (
             <FindRow
               find={item}
