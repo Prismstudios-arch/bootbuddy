@@ -13,7 +13,8 @@
       "bundleIdentifier": "com.bootsalebuddy.app",
       "infoPlist": {
         "NSCameraUsageDescription": "Boot Sale Buddy uses the camera to identify items and estimate their resale value. Photos are processed and then discarded — never stored on our servers.",
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "CFBundleDisplayName": "BootSaleBuddy"
       },
       "config": {
         "usesNonExemptEncryption": false
