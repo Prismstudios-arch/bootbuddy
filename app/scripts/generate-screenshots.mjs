@@ -103,7 +103,10 @@ try {
  * body, window with two spools, transport buttons, headphone lead.
  */
 function walkman(x, y, w, opts = {}) {
-  const h = opts.h ?? w * 0.72;
+  // Portrait by default with a real photo: boxed items are taller than
+  // they are wide, and slicing one to landscape crops off the label,
+  // which is the part that makes it recognisable.
+  const h = opts.h ?? (ITEM_PHOTO ? w * 1.24 : w * 0.72);
   const k = w / 300; // everything scales off a 300-wide reference
   if (ITEM_PHOTO) {
     return `<image href="${ITEM_PHOTO}" x="${x}" y="${y}" width="${w}" height="${h}" preserveAspectRatio="xMidYMid slice" clip-path="inset(0 round ${16 * k})"/>`;
@@ -200,9 +203,9 @@ const statusBar = () =>
 
 /** 1. Camera with framing guide. */
 function screenScan() {
-  const g = 420;
+  const g = 400;
   const gx = (SW - g) / 2;
-  const gy = 620;
+  const gy = 570;
   const corner = 86;
   const bracket = (px, py, sx, sy) =>
     `<path d="M ${px + sx * corner} ${py} L ${px} ${py} L ${px} ${py + sy * corner}" stroke="${C.text}" stroke-width="8" fill="none" stroke-linecap="round" opacity="0.9"/>`;
@@ -210,23 +213,20 @@ function screenScan() {
     rect(0, 0, SW, SH, { fill: "#0B0A09" }) +
     // A trestle table with a cassette player framed on it — vague blobs
     // read as a rendering artefact, a recognisable object reads as a scan.
-    rect(0, 980, SW, 420, { fill: "#241F1A" }) +
-    rect(0, 980, SW, 6, { fill: "#332C25" }) +
-    rect(150, 1080, 180, 120, { r: 12, fill: "#1C1815" }) +
-    rect(600, 1050, 160, 150, { r: 70, fill: "#1C1815" }) +
+    walkman(SW / 2 - 170, 600, 340) +
     statusBar() +
     bracket(gx, gy, 1, 1) +
     bracket(gx + g, gy, -1, 1) +
-    bracket(gx, gy + g, 1, -1) +
-    bracket(gx + g, gy + g, -1, -1) +
-    rect(gx - 40, gy + g + 70, g + 80, 64, { r: 32, fill: "rgba(18,17,16,0.75)" }) +
-    text(SW / 2, gy + g + 112, "One item, fill the frame — labels help", {
+    bracket(gx, gy + g * 1.22, 1, -1) +
+    bracket(gx + g, gy + g * 1.22, -1, -1) +
+    rect(gx - 40, gy + g * 1.22 + 60, g + 80, 64, { r: 32, fill: "rgba(18,17,16,0.75)" }) +
+    text(SW / 2, gy + g * 1.22 + 102, "One item, fill the frame — labels help", {
       size: 24,
       fill: C.text,
       anchor: "middle",
     }) +
     // Recent scans strip.
-    pill(56, SH - 400, "Sony Walkman · £28", { bg: "rgba(18,17,16,0.72)", fg: C.text }) +
+    pill(56, SH - 400, "Corsair RGB Pro · £38", { bg: "rgba(18,17,16,0.72)", fg: C.text }) +
     pill(430, SH - 400, "Pyrex bowl · £14", { bg: "rgba(18,17,16,0.72)", fg: C.text }) +
     // Torch + shutter.
     `<circle cx="150" cy="${SH - 250}" r="52" fill="rgba(18,17,16,0.55)"/>` +
@@ -242,8 +242,7 @@ function resultSheet({ highlightMaxBuy = false } = {}) {
   const top = highlightMaxBuy ? 700 : 820;
   let s =
     rect(0, 0, SW, SH, { fill: "#0B0A09" }) +
-    rect(120, 180, 660, 460, { r: 24, fill: "#221E1A" }) +
-    walkman(190, 250, 520) +
+    walkman(SW / 2 - 175, 170, 350) +
     // Lighter than the app's scrim so the frozen frame still reads at
     // thumbnail size; the sheet is still clearly the focus.
     rect(0, 0, SW, SH, { fill: "rgba(18,17,16,0.55)" }) +
@@ -252,11 +251,11 @@ function resultSheet({ highlightMaxBuy = false } = {}) {
     rect(SW / 2 - 36, top + 26, 72, 8, { r: 4, fill: C.border });
 
   let y = top + 110;
-  s += text(56, y, "Sony Walkman WM-EX194", { size: 46, weight: 700 });
+  s += text(56, y, "Corsair Vengeance RGB Pro", { size: 42, weight: 700 });
   y += 44;
   s += text(56, y, "Certain", { size: 26, fill: C.muted });
   y += 120;
-  s += text(56, y, "£28.50", { size: 118, weight: 700, fill: C.text });
+  s += text(56, y, "£38.50", { size: 118, weight: 700, fill: C.text });
   y += 48;
   s += text(56, y, "Asking prices on eBay UK right now · 23 listings", {
     size: 24,
@@ -268,15 +267,15 @@ function resultSheet({ highlightMaxBuy = false } = {}) {
   s +=
     rect(56, y, SW - 112, 14, { r: 7, fill: C.raised }) +
     rect(56 + (SW - 112) * 0.46, y - 8, 8, 30, { r: 4, fill: C.profit }) +
-    text(56, y + 60, "£8.99", { size: 24, fill: C.faint }) +
-    text(SW - 56, y + 60, "£45.00", { size: 24, fill: C.faint, anchor: "end" });
+    text(56, y + 60, "£24.99", { size: 24, fill: C.faint }) +
+    text(SW - 56, y + 60, "£59.00", { size: 24, fill: C.faint, anchor: "end" });
 
   y += 110;
   const boxFill = highlightMaxBuy ? C.profitBg : C.surface;
   s +=
     rect(56, y, SW - 112, 210, { r: 24, fill: boxFill }) +
     label(96, y + 56, "Your max buy price") +
-    text(96, y + 140, "£11.40", { size: 76, weight: 700, fill: C.profit }) +
+    text(96, y + 140, "£15.40", { size: 76, weight: 700, fill: C.profit }) +
     text(96, y + 182, "40% of median — room for fees, postage and profit", {
       size: 22,
       fill: C.faint,
@@ -300,15 +299,14 @@ function screenBuyLog() {
   const top = 900;
   let s =
     rect(0, 0, SW, SH, { fill: "#0B0A09" }) +
-    rect(120, 180, 660, 500, { r: 24, fill: "#221E1A" }) +
-    walkman(190, 270, 520) +
+    walkman(SW / 2 - 165, 180, 330) +
     rect(0, 0, SW, SH, { fill: "rgba(18,17,16,0.55)" }) +
     statusBar() +
     rect(0, top, SW, SH - top, { r: 48, fill: C.bg }) +
     rect(SW / 2 - 36, top + 26, 72, 8, { r: 4, fill: C.border });
 
   let y = top + 110;
-  s += text(56, y, "Sony Walkman WM-EX194", { size: 44, weight: 700 });
+  s += text(56, y, "Corsair Vengeance RGB Pro", { size: 40, weight: 700 });
   y += 44;
   s += text(56, y, "What did you pay?", { size: 26, fill: C.muted });
   y += 80;
@@ -335,7 +333,7 @@ function screenBuyLog() {
   });
 
   y += 130;
-  s += text(56, y, "That's about £28.00 of headroom at the median.", {
+  s += text(56, y, "That's about £33.50 of headroom at the median.", {
     size: 28,
     fill: C.profit,
   });
@@ -365,7 +363,7 @@ function screenFinds() {
 
   y += 120;
   const rows = [
-    ["Sony Walkman WM-EX194", "Paid £0.50 · sold £42.00", "+£32.55", true],
+    ["Corsair Vengeance RGB Pro", "Paid £5.00 · sold £42.00", "+£28.05", true],
     ["Technics SL-1200 platter", "Paid £5.00 · worth ~£68.00", "+£63.00", false],
     ["Pyrex bowl, blue", "Paid £1.00 · sold £12.00", "+£9.44", true],
     ["Denby stoneware set", "Paid £4.00 · worth ~£35.00", "+£31.00", false],
@@ -409,7 +407,7 @@ function screenDetail() {
   s += rect(56, y, SW - 112, 480, { r: 24, fill: C.surface });
   const lines = [
     ["Sold for", "£42.00", C.text],
-    ["You paid", "−£0.50", C.loss],
+    ["You paid", "−£5.00", C.loss],
     ["Selling fees", "−£5.46", C.loss],
     ["Postage", "−£3.49", C.loss],
   ];
@@ -482,9 +480,9 @@ function screenProfit() {
     rect(56, y, SW - 112, 250, { r: 24, fill: C.surface }) +
     label(96, y + 56, "Best flip ever") +
     photo(96, y + 84, 100) +
-    text(224, y + 128, "Sony Walkman", { size: 34, weight: 600 }) +
-    text(224, y + 172, "£0.50 → £42.00", { size: 26, fill: C.muted }) +
-    text(SW - 96, y + 158, "£32.55", { size: 52, weight: 700, fill: C.gold, anchor: "end" });
+    text(224, y + 128, "Corsair Vengeance RGB", { size: 30, weight: 600 }) +
+    text(224, y + 172, "£5.00 → £42.00", { size: 26, fill: C.muted }) +
+    text(SW - 96, y + 158, "£28.05", { size: 52, weight: 700, fill: C.gold, anchor: "end" });
 
   return s + tabBar("Profit");
 }
@@ -500,14 +498,14 @@ function screenShare() {
   s += label(cx + 60, cy + 100, "That's a find", C.gold);
   s += rect(cx + 60, cy + 140, cw - 120, 420, { r: 20, fill: "#2A2420" });
   s += walkman(cx + cw / 2 - 170, cy + 200, 340);
-  s += text(cx + 60, cy + 640, "Sony Walkman WM-EX194", { size: 44, weight: 700 });
-  s += text(cx + 60, cy + 720, "Found for £0.50  →  Sold for £42.00", {
+  s += text(cx + 60, cy + 640, "Corsair Vengeance RGB Pro", { size: 38, weight: 700 });
+  s += text(cx + 60, cy + 720, "Found for £5.00  →  Sold for £42.00", {
     size: 28,
     fill: C.muted,
   });
   s += rect(cx + 60, cy + 770, cw - 120, 250, { r: 24, fill: C.surface });
   s += label(cx + 100, cy + 830, "Profit");
-  s += text(cx + 100, cy + 950, "£32.55", { size: 104, weight: 700, fill: C.profit });
+  s += text(cx + 100, cy + 950, "£28.05", { size: 104, weight: 700, fill: C.profit });
   s += `<circle cx="${cx + 78}" cy="${cy + 1090}" r="26" fill="${C.gold}"/>`;
   s += text(cx + 120, cy + 1102, "Boot Sale Buddy", { size: 28, fill: C.muted });
 
@@ -622,9 +620,9 @@ function heroMaxBuy() {
   let y = CARD_Y + 150;
   let s = label(x, y, "The item");
   y += 92;
-  s += text(x, y, "Sony Walkman", { size: 70, weight: 700 });
+  s += text(x, y, "Corsair Vengeance", { size: 70, weight: 700 });
   y += 84;
-  s += text(x, y, "WM-EX194", { size: 70, weight: 700 });
+  s += text(x, y, "RGB Pro 16GB", { size: 70, weight: 700 });
 
   y += 130;
   s += rect(x, y, w, 2, { fill: C.border });
@@ -632,7 +630,7 @@ function heroMaxBuy() {
   y += 140;
   s += label(x, y, "Median asking price");
   y += 124;
-  s += text(x, y, "£28.50", { size: 128, weight: 800 });
+  s += text(x, y, "£38.50", { size: 128, weight: 800 });
   y += 58;
   s += text(x, y, "Asking prices on eBay UK right now · 23 listings", {
     size: 30,
@@ -643,13 +641,13 @@ function heroMaxBuy() {
   s +=
     rect(x, y, w, 16, { r: 8, fill: C.raised }) +
     rect(x + w * 0.46, y - 10, 10, 36, { r: 5, fill: C.profit }) +
-    text(x, y + 82, "£8.99", { size: 28, fill: C.faint }) +
-    text(x + w, y + 82, "£45.00", { size: 28, fill: C.faint, anchor: "end" });
+    text(x, y + 82, "£24.99", { size: 28, fill: C.faint }) +
+    text(x + w, y + 82, "£59.00", { size: 28, fill: C.faint, anchor: "end" });
 
   y += 200;
   s += rect(x, y, w, 420, { r: 36, fill: C.profitBg, stroke: C.profit, sw: 3 });
   s += label(x + 56, y + 92, "Your max buy price", C.profit);
-  s += text(x + 56, y + 260, "£11.40", { size: 186, weight: 800, fill: C.profit });
+  s += text(x + 56, y + 260, "£15.40", { size: 186, weight: 800, fill: C.profit });
   s += text(x + 56, y + 330, "40% of the median — leaves room for eBay fees,", {
     size: 30,
     fill: C.muted,
@@ -674,7 +672,7 @@ function heroBreakdown() {
   let y = CARD_Y + 140;
   let s = photo(x, y, 150, 30);
   s += pill(x + 196, y + 10, "Sold", { bg: C.profitBg, fg: C.profit });
-  s += text(x + 196, y + 136, "Sony Walkman", { size: 58, weight: 700 });
+  s += text(x + 196, y + 136, "Corsair Vengeance RGB", { size: 46, weight: 700 });
 
   y += 250;
   s += rect(x, y, w, 2, { fill: C.border });
@@ -682,7 +680,7 @@ function heroBreakdown() {
   y += 120;
   const rows = [
     ["Sold for", "£42.00", C.text],
-    ["You paid", "−£0.50", C.loss],
+    ["You paid", "−£5.00", C.loss],
     ["Selling fees (13%)", "−£5.46", C.loss],
     ["Postage", "−£3.49", C.loss],
   ];
@@ -697,18 +695,18 @@ function heroBreakdown() {
   s += rect(x, y, w, 2, { fill: C.border });
   y += 140;
   s += text(x, y, "Profit", { size: 52, weight: 700 });
-  s += text(x + w, y + 20, "+£32.55", { size: 128, weight: 800, fill: C.profit, anchor: "end" });
+  s += text(x + w, y + 20, "+£28.05", { size: 128, weight: 800, fill: C.profit, anchor: "end" });
 
   y += 170;
   s += rect(x, y, w, 240, { r: 36, fill: C.surface });
   s += label(x + 56, y + 76, "Margin");
-  s += text(x + 56, y + 176, "77.5%", { size: 92, weight: 800, fill: C.gold });
+  s += text(x + 56, y + 176, "66.8%", { size: 92, weight: 800, fill: C.gold });
   s += text(x + w - 56, y + 150, "Bought in Lisburn", {
     size: 30,
     fill: C.muted,
     anchor: "end",
   });
-  s += text(x + w - 56, y + 194, "for fifty pence", { size: 30, fill: C.muted, anchor: "end" });
+  s += text(x + w - 56, y + 194, "for a fiver", { size: 30, fill: C.muted, anchor: "end" });
   return heroShell(s);
 }
 
@@ -858,7 +856,7 @@ const SHOTS = [
     caption: "A price in|seconds",
     sub: "Not a guess, not a gut feeling",
     screen: resultSheet(),
-    float: floatChip(760, 700, "£28.50", "Median", C.gold),
+    float: floatChip(760, 700, "£38.50", "Median", C.gold),
   },
   {
     file: "03-maxbuy.png",
@@ -902,11 +900,11 @@ const SHOTS = [
   {
     file: "08-share.png",
     caption: "Share|the wins",
-    sub: "50p to £42 deserves an audience",
+    sub: "A fiver to £42 deserves an audience",
     accent: C.profit,
     tint: "#0C1C13",
     screen: screenProfit(),
-    float: floatChip(700, 640, "£32.55", "Best flip", C.gold),
+    float: floatChip(700, 640, "£28.05", "Best flip", C.gold),
   },
   {
     file: "09-paywall.png",
