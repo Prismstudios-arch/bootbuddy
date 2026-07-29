@@ -52,7 +52,8 @@
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "icons": "node scripts/generate-icons.mjs",
-    "screenshots": "node scripts/generate-screenshots.mjs"
+    "screenshots": "node scripts/generate-screenshots.mjs",
+    "resize-shots": "node scripts/resize-captures.mjs"
   },
   "private": true
 }
