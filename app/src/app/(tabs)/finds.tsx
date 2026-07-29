@@ -1,6 +1,5 @@
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { FlatList, Pressable, View } from "react-native";
 import { useFinds, type Find, type FindStatus } from "@/api/finds";
 import { EmptyState } from "@/components/empty-state";
@@ -12,6 +11,7 @@ import { Type } from "@/components/type";
 import { useTheme } from "@/design/theme";
 import { radius, space } from "@/design/tokens";
 import { haptic } from "@/lib/haptics";
+import { useTabBarHeight } from "@/lib/tab-bar";
 import { formatPence } from "@/lib/money";
 
 type Filter = FindStatus | "all";
@@ -30,7 +30,7 @@ const FILTERS: { key: Filter; label: string }[] = [
 export default function FindsScreen() {
   const router = useRouter();
   const [filter, setFilter] = useState<Filter>("in_stock");
-  const tabBarHeight = useBottomTabBarHeight();
+  const tabBarHeight = useTabBarHeight();
   const finds = useFinds(filter);
 
   return (

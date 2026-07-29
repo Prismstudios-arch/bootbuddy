@@ -1,4 +1,3 @@
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { RefreshControl, ScrollView, View } from "react-native";
 import { useStats } from "@/api/finds";
 import { CountUpPrice } from "@/components/count-up";
@@ -12,6 +11,7 @@ import { Type } from "@/components/type";
 import { useTheme } from "@/design/theme";
 import { radius, space } from "@/design/tokens";
 import { formatPence } from "@/lib/money";
+import { useTabBarHeight } from "@/lib/tab-bar";
 
 /**
  * Profit — the dopamine screen. Realised profit is the hero; everything
@@ -22,7 +22,7 @@ export default function ProfitScreen() {
   const stats = useStats();
   // Without this the last card sits under the tab bar and its button is
   // literally cut in half.
-  const tabBarHeight = useBottomTabBarHeight();
+  const tabBarHeight = useTabBarHeight();
 
   const best = stats.data?.bestFlip ?? null;
   if (stats.isPending) {
