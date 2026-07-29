@@ -9,9 +9,12 @@ type AppState = {
   /** Default selling-fee % used when estimating profit (eBay ≈ 13). */
   defaultFeePercent: number;
   hasOnboarded: boolean;
+  /** Dismissed the "back up your finds" nudge — never show it again. */
+  dismissedBackupPrompt: boolean;
   setAppearance: (a: Appearance) => void;
   setDefaultFeePercent: (pct: number) => void;
   completeOnboarding: () => void;
+  dismissBackupPrompt: () => void;
 };
 
 /**
@@ -25,9 +28,11 @@ export const useAppStore = create<AppState>()(
       appearance: "system",
       defaultFeePercent: 13,
       hasOnboarded: false,
+      dismissedBackupPrompt: false,
       setAppearance: (appearance) => set({ appearance }),
       setDefaultFeePercent: (defaultFeePercent) => set({ defaultFeePercent }),
       completeOnboarding: () => set({ hasOnboarded: true }),
+      dismissBackupPrompt: () => set({ dismissedBackupPrompt: true }),
     }),
     {
       name: "bsb-app-store",

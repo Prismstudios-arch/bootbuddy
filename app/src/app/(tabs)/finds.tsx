@@ -2,6 +2,7 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 import { FlatList, Pressable, View } from "react-native";
 import { useFinds, type Find, type FindStatus } from "@/api/finds";
+import { BackupPrompt } from "@/components/backup-prompt";
 import { EmptyState } from "@/components/empty-state";
 import { OfflineBanner } from "@/components/offline-banner";
 import { FindThumbnail } from "@/components/find-thumbnail";
@@ -41,6 +42,7 @@ export default function FindsScreen() {
       </View>
 
       <OfflineBanner />
+      <BackupPrompt findCount={finds.data?.length ?? 0} />
 
       <View style={{ flexDirection: "row", gap: space.sm, paddingBottom: space.md }}>
         {FILTERS.map((item) => (
