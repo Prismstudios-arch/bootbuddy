@@ -15,7 +15,6 @@
         "NSCameraUsageDescription": "Boot Sale Buddy uses the camera to identify items and estimate their resale value. Photos are processed and then discarded — never stored on our servers.",
         "ITSAppUsesNonExemptEncryption": false
       },
-      "buildNumber": "1",
       "config": {
         "usesNonExemptEncryption": false
       },
@@ -29,7 +28,10 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "versionCode": 1
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "output": "static",
@@ -62,6 +64,13 @@
       "typedRoutes": true,
       "reactCompiler": true
     },
-    "primaryColor": "#E8B14E"
+    "primaryColor": "#E8B14E",
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "0d0b139a-a61a-47af-afda-8df2d33b8988"
+      }
+    },
+    "owner": "jonnywilson"
   }
 }
