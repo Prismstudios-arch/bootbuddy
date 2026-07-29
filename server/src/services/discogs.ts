@@ -30,6 +30,7 @@ type PriceSuggestions = Record<string, { currency?: string; value?: number } | u
 
 type MarketplaceStats = {
   num_for_sale?: number;
+  blocked_from_sale?: boolean;
   lowest_price?: { value?: number; currency?: string } | null;
 };
 
@@ -65,6 +66,17 @@ function toPence(value: number | undefined): Pence | null {
 /**
  * Returns null (never throws) so a Discogs outage just falls through to the
  * next provider rather than failing the scan.
+ *
+ * Two paths, best first:
+ *
+ *  1. Price suggestions — derived from completed sales, so genuinely "sold
+ *     for". Discogs only serves these to accounts with seller settings
+ *     filled in; without that it returns "You must fill out your seller
+ *     settings first" and we fall through.
+ *  2. Marketplace stats across the top few matching pressings — the
+ *     cheapest copy currently listed for each. That's asking-price data and
+ *     is labelled as such, but it still answers the question that matters
+ *     in a field: is this common and cheap, or scarce and worth having?
  */
 export async function searchDiscogsPrices(query: string): Promise<PriceResult | null> {
   if (!env.DISCOGS_TOKEN) return null;
@@ -72,35 +84,40 @@ export async function searchDiscogsPrices(query: string): Promise<PriceResult | 
   const search = await discogsFetch<SearchResponse>(
     `/database/search?type=release&per_page=5&q=${encodeURIComponent(query)}`,
   );
-  const releaseId = search?.results?.find((result) => typeof result.id === "number")?.id;
-  if (!releaseId) return null;
+  const releaseIds = (search?.results ?? [])
+    .map((result) => result.id)
+    .filter((id): id is number => typeof id === "number")
+    .slice(0, 3);
+  if (releaseIds.length === 0) return null;
 
-  // Suggestions are per-condition and sales-derived; stats give the live
-  // listing count. Fetch together — one is useless without context.
-  const [suggestions, stats] = await Promise.all([
-    discogsFetch<PriceSuggestions>(`/marketplace/price_suggestions/${releaseId}`),
-    discogsFetch<MarketplaceStats>(`/marketplace/stats/${releaseId}?curr_abbr=GBP`),
-  ]);
+  const primary = releaseIds[0]!;
 
-  const values: Pence[] = [];
+  // Path 1: real sold-price data, if this account can see it.
+  const suggestions = await discogsFetch<PriceSuggestions>(
+    `/marketplace/price_suggestions/${primary}`,
+  );
+  const suggested: Pence[] = [];
   for (const entry of Object.values(suggestions ?? {})) {
     // Only GBP: converting currencies ourselves would invent precision we
     // don't have, and a wrong price is worse than no price.
-    if (entry?.currency && entry.currency !== "GBP") continue;
-    const amount = toPence(entry?.value);
-    if (amount !== null) values.push(amount);
+    if (!entry || typeof entry !== "object") continue;
+    if (entry.currency && entry.currency !== "GBP") continue;
+    const amount = toPence(entry.value);
+    if (amount !== null) suggested.push(amount);
   }
 
-  if (values.length > 0) {
-    const sorted = [...values].sort((a, b) => a - b);
+  if (suggested.length > 1) {
+    const sorted = [...suggested].sort((a, b) => a - b);
     const median = medianPence(sorted);
     if (median !== null) {
+      const stats = await discogsFetch<MarketplaceStats>(
+        `/marketplace/stats/${primary}?curr_abbr=GBP`,
+      );
       return {
         lowPence: sorted[0] ?? median,
         medianPence: median,
         highPence: sorted[sorted.length - 1] ?? median,
-        // Each value is a condition grade, not a separate listing.
-        listingCount: stats?.num_for_sale ?? values.length,
+        listingCount: stats?.num_for_sale ?? suggested.length,
         maxBuyPence: suggestedMaxBuy(median),
         source: "discogs",
         basis: "sold",
@@ -108,19 +125,38 @@ export async function searchDiscogsPrices(query: string): Promise<PriceResult | 
     }
   }
 
-  // No sales history — fall back to the cheapest copy currently listed.
-  const lowest = toPence(stats?.lowest_price?.value ?? undefined);
-  if (lowest !== null && (stats?.lowest_price?.currency ?? "GBP") === "GBP") {
-    return {
-      lowPence: lowest,
-      medianPence: lowest,
-      highPence: lowest,
-      listingCount: stats?.num_for_sale ?? 1,
-      maxBuyPence: suggestedMaxBuy(lowest),
-      source: "discogs",
-      basis: "asking",
-    };
+  // Path 2: cheapest listed copy of each matching pressing. A first press
+  // and a 2011 reissue are different objects at very different money, so
+  // the spread across pressings is genuinely informative rather than noise.
+  const stats = await Promise.all(
+    releaseIds.map((id) =>
+      discogsFetch<MarketplaceStats>(`/marketplace/stats/${id}?curr_abbr=GBP`),
+    ),
+  );
+
+  const lows: Pence[] = [];
+  let forSale = 0;
+  for (const stat of stats) {
+    if (!stat || stat.blocked_from_sale) continue;
+    forSale += stat.num_for_sale ?? 0;
+    if ((stat.lowest_price?.currency ?? "GBP") !== "GBP") continue;
+    const amount = toPence(stat.lowest_price?.value ?? undefined);
+    if (amount !== null) lows.push(amount);
   }
 
-  return null;
+  if (lows.length === 0) return null;
+
+  const sorted = [...lows].sort((a, b) => a - b);
+  const median = medianPence(sorted);
+  if (median === null) return null;
+
+  return {
+    lowPence: sorted[0] ?? median,
+    medianPence: median,
+    highPence: sorted[sorted.length - 1] ?? median,
+    listingCount: forSale,
+    maxBuyPence: suggestedMaxBuy(median),
+    source: "discogs",
+    basis: "asking",
+  };
 }

@@ -263,7 +263,7 @@ function priceCaption(prices: AskingPrices): string {
   if (prices.source === "discogs") {
     return prices.basis === "sold"
       ? `What copies actually sold for on Discogs · ${count} for sale now`
-      : `Cheapest copy listed on Discogs · ${count} for sale`;
+      : `Cheapest copies listed on Discogs · ${count} for sale`;
   }
   return `Asking prices on eBay UK right now · ${count} listings`;
 }
