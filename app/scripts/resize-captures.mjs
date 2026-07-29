@@ -16,8 +16,29 @@ import sharp from "sharp";
  * a straight resize is imperceptible and far simpler than cropping.
  */
 const here = dirname(fileURLToPath(import.meta.url));
-const inDir = join(here, "..", "assets", "screenshots", "captures");
 const outRoot = join(here, "..", "assets", "screenshots");
+
+/**
+ * Look in a couple of plausible spots. "assets/captures" is an easy
+ * mistake to make when the canonical folder is one level deeper, and
+ * silently reporting "no captures found" while the files sit right there
+ * is a miserable way to spend ten minutes.
+ */
+const CANDIDATES = [
+  join(outRoot, "captures"),
+  join(here, "..", "assets", "captures"),
+  join(here, "..", "..", "captures"),
+];
+const inDir = CANDIDATES.find((dir) => {
+  try {
+    return (
+      existsSync(dir) &&
+      readdirSync(dir).some((f) => [".png", ".jpg", ".jpeg"].includes(extname(f).toLowerCase()))
+    );
+  } catch {
+    return false;
+  }
+}) ?? CANDIDATES[0];
 
 const SIZES = [
   { dir: "iphone-6.7", w: 1290, h: 2796, note: "6.7in and 6.9in slots" },
