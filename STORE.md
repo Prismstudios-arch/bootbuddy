@@ -20,11 +20,17 @@ this file changes in the same commit.
 ## Keywords (100 char limit)
 
 ```
-reseller,flipping,car boot,charity shop,thrift,ebay,vinted,depop,resale,price,scanner,profit
+reseller,flipping,carboot,charity,thrift,ebay,vinted,depop,resale,profit,vintage,secondhand,antique
 ```
 
-That's 92 characters. Don't repeat words already in the app name or
-subtitle — Apple indexes those separately, so repeating them wastes space.
+99 characters. No spaces after commas — they count against the limit and
+buy nothing.
+
+Deliberately excludes `scanner`, `price`, `scan`, `flip` and `boot`: Apple
+indexes the app name and subtitle separately, so repeating those words
+wastes characters. `car boot` is one word here because "boot" already
+appears in the name and Apple combines terms, while `carboot` also catches
+people who type it that way. Singular forms match plurals automatically.
 
 ## Description
 
