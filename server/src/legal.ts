@@ -23,7 +23,7 @@ export type LegalSection = {
 };
 
 export type LegalDoc = {
-  id: "privacy" | "terms";
+  id: "privacy" | "terms" | "support";
   title: string;
   updated: string;
   sections: LegalSection[];
@@ -84,8 +84,8 @@ export const privacyDoc: LegalDoc = {
           text: "receives the scan photo to identify the item. Under Google's free tier, submitted content may be used to improve their models.",
         },
         {
-          lead: "eBay",
-          text: "receives the search term — not your photo, not your identity — to look up current asking prices.",
+          lead: "Discogs",
+          text: "receives the search term — not your photo, not your identity — to look up prices for records and CDs.",
         },
         { lead: "Apple and RevenueCat", text: "handle payments and subscription status." },
         {
@@ -132,14 +132,14 @@ export const termsDoc: LegalDoc = {
     {
       heading: "What Boot Sale Buddy does",
       paragraphs: [
-        "Boot Sale Buddy identifies second-hand items from a photo and shows you what similar items are currently being asked for on eBay UK, so you can decide whether something's worth buying.",
+        "Boot Sale Buddy identifies second-hand items from a photo and helps you work out what they're worth, so you can decide whether something's worth buying. For records and CDs it shows prices from completed sales on Discogs. For everything else it takes you straight to the live sold listings on eBay, with the search already worked out.",
       ],
     },
     {
       heading: "Prices are estimates, not valuations",
       tone: "warning",
       callout:
-        "The prices we show are asking prices on active eBay listings — what sellers are hoping to get. They are not sold prices, not an appraisal, and not a guarantee that you can sell an item for any particular amount. Item identification is done by an AI model and can be wrong.",
+        "Prices are a guide, not an appraisal, and never a guarantee that you can sell an item for any particular amount. The app always states which source a figure came from and whether it reflects completed sales or what sellers are currently asking. Item identification is done by an AI model and can be wrong.",
       paragraphs: [
         "Every buying decision is yours. Boot Sale Buddy is a research tool, not financial advice, and we're not liable for money lost on a purchase or a sale. Check anything valuable properly before parting with real money.",
       ],
@@ -172,13 +172,13 @@ export const termsDoc: LegalDoc = {
     {
       heading: "Availability",
       paragraphs: [
-        "We aim to keep the service running, but it depends on third parties (eBay, AI providers, hosting) and may occasionally be unavailable. When price data can't be fetched, the app will tell you rather than guess.",
+        "We aim to keep the service running, but it depends on third parties (AI providers, price sources, hosting) and may occasionally be unavailable. When price data can't be fetched, the app tells you and offers to search for you rather than inventing a number.",
       ],
     },
     {
-      heading: "eBay",
+      heading: "Marketplaces",
       paragraphs: [
-        "Price information is retrieved via the eBay API. eBay is a trademark of eBay Inc. Boot Sale Buddy is not affiliated with, endorsed by, or sponsored by eBay, Vinted or any other marketplace.",
+        "Price information for records and CDs comes from the Discogs API. Links to other marketplaces open their own search pages in your browser. Discogs, eBay, Vinted and Google are trademarks of their respective owners, and Boot Sale Buddy is not affiliated with, endorsed by, or sponsored by any of them.",
       ],
     },
     {
@@ -262,5 +262,48 @@ ${body}
 </html>`;
 }
 
+export const supportDoc: LegalDoc = {
+  id: "support",
+  title: "Support",
+  updated: UPDATED,
+  sections: [
+    {
+      callout: `Something not working, or an idea for the app? Email ${CONTACT} and a real person will read it — there is only one of us.`,
+    },
+    {
+      heading: "Common questions",
+      bullets: [
+        {
+          lead: "Why does it say 'market data unavailable'?",
+          text: "We show live prices for records and CDs. For anything else, tap one of the buttons on the result to see what it's sold for on eBay — the search is already filled in for you.",
+        },
+        {
+          lead: "Are these sold prices?",
+          text: "For records and CDs on Discogs, yes — those are completed sales. Everywhere else the app says exactly what it's showing you, and never claims a valuation.",
+        },
+        {
+          lead: "I've lost my finds.",
+          text: "Your account lives on your device unless you sign in with Apple. If you've moved to a new phone without signing in, email us — if you still have the old device we may be able to help.",
+        },
+        {
+          lead: "How do I cancel?",
+          text: "Settings app → your name → Subscriptions → Boot Sale Buddy. Cancelling there stops the renewal; you keep Pro until the period ends.",
+        },
+        {
+          lead: "How do I delete my data?",
+          text: "Settings → Delete account & data, inside the app. It removes everything from our servers immediately and permanently.",
+        },
+      ],
+    },
+    {
+      heading: "Still stuck?",
+      paragraphs: [
+        `Email ${CONTACT} with your device model and iOS version, and roughly what you were doing when it went wrong. Screenshots help enormously.`,
+      ],
+    },
+  ],
+};
+
 export const privacyPage = renderLegalHtml(privacyDoc);
 export const termsPage = renderLegalHtml(termsDoc);
+export const supportPage = renderLegalHtml(supportDoc);

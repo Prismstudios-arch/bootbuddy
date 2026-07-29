@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { requestId } from "hono/request-id";
 import { secureHeaders } from "hono/secure-headers";
 import { env } from "./env.js";
-import { privacyDoc, privacyPage, termsDoc, termsPage } from "./legal.js";
+import { privacyDoc, privacyPage, supportPage, termsDoc, termsPage } from "./legal.js";
 import { logger } from "./logger.js";
 import { captureError } from "./observability.js";
 import { rateLimit } from "./middleware/rate-limit.js";
@@ -92,6 +92,8 @@ export function createApp(deps: AppDeps = {}) {
   // lives in legal.ts and must stay true to what the code actually does.
   app.get("/privacy", (c) => c.html(privacyPage));
   app.get("/terms", (c) => c.html(termsPage));
+  // App Store Connect requires a reachable Support URL.
+  app.get("/support", (c) => c.html(supportPage));
 
   // Same content as the pages above, as data, so the app can render it
   // natively instead of throwing the user out to a browser. Unauthenticated
