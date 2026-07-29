@@ -916,11 +916,41 @@ const SHOTS = [
   },
 ];
 
+/**
+ * App Store Connect has a separate upload slot per device size and rejects
+ * anything that isn't an exact match, so we emit every accepted size rather
+ * than making someone resize by hand. Everything is composed once at
+ * 1290×2796 and resized; the aspect ratios differ by about 0.2%, which is
+ * invisible, and re-laying out per size would risk the sizes disagreeing.
+ */
+const SIZES = [
+  { dir: "iphone-6.7", w: 1290, h: 2796, note: "6.7in and 6.9in slots" },
+  { dir: "iphone-6.5", w: 1284, h: 2778, note: "6.5in slot" },
+];
+
+for (const size of SIZES) {
+  mkdirSync(join(outDir, size.dir), { recursive: true });
+}
+
 for (const shot of SHOTS) {
   const svg = compose(shot);
-  const png = await sharp(Buffer.from(svg), { density: 144 }).png().toBuffer();
-  writeFileSync(join(outDir, shot.file), png);
-  console.log(`wrote ${shot.file} (${(png.length / 1024).toFixed(0)}KB)`);
+  // Rendered at 2x then downsampled: sharp's density is DPI, so 144 on a
+  // 1290-wide viewBox produces 2580px. That has to be resized to the exact
+  // target — App Store Connect rejects anything off by a single pixel, and
+  // an oversized file looks correct until you check its metadata.
+  const master = await sharp(Buffer.from(svg), { density: 144 }).png().toBuffer();
+  for (const size of SIZES) {
+    const png = await sharp(master)
+      .resize(size.w, size.h, { fit: "fill" })
+      .png({ compressionLevel: 9 })
+      .toBuffer();
+    writeFileSync(join(outDir, size.dir, shot.file), png);
+  }
+  console.log(`wrote ${shot.file}`);
 }
-console.log(`
-9 screenshots at ${W}×${H} in assets/screenshots/`);
+
+for (const size of SIZES) {
+  console.log(`
+${size.w}x${size.h}  ->  assets/screenshots/${size.dir}/   (${size.note})`);
+}
+
