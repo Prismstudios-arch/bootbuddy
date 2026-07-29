@@ -178,6 +178,8 @@ export const findsRoutes = new Hono<AuthEnv>()
       await db
         .update(schema.finds)
         .set({
+          // Keep the old figure so the UI can show which way it moved.
+          previousValuePence: row.estimatedValuePence,
           estimatedValuePence: prices.medianPence,
           valuedAt: now,
           updatedAt: now,
@@ -291,6 +293,12 @@ export function toFindResponse(find: FindRow) {
     boughtAt: find.boughtAt.toISOString(),
     estimatedValuePence: find.estimatedValuePence,
     valuedAt: find.valuedAt?.toISOString() ?? null,
+    previousValuePence: find.previousValuePence,
+    /** Movement since the last refresh — null when there's nothing to compare. */
+    valueChangePence:
+      find.previousValuePence !== null && find.estimatedValuePence !== null
+        ? find.estimatedValuePence - find.previousValuePence
+        : null,
     soldPricePence: find.soldPricePence,
     feesPence: find.feesPence,
     postagePence: find.postagePence,

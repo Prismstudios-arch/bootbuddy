@@ -102,12 +102,15 @@ export default function ProfitScreen() {
 
         <View style={{ flexDirection: "row", gap: space.md, marginTop: space.md }}>
           <StatCard
-            label="In stock"
-            value={`${data.inStockCount}`}
+            label="Haul value"
+            value={formatPence(data.stockValuePence)}
             sub={
-              data.unrealisedProfitPence !== 0
-                ? `${formatPence(data.unrealisedProfitPence)} unrealised`
-                : undefined
+              data.stockChangePence !== 0
+                ? `${data.stockChangePence > 0 ? "▲" : "▼"} ${formatPence(Math.abs(data.stockChangePence))} since last check`
+                : `${data.inStockCount} ${data.inStockCount === 1 ? "item" : "items"} in stock`
+            }
+            subTone={
+              data.stockChangePence > 0 ? "profit" : data.stockChangePence < 0 ? "loss" : undefined
             }
           />
           <StatCard label="Spent" value={formatPence(data.totalSpentPence)} />
@@ -174,7 +177,17 @@ export default function ProfitScreen() {
   );
 }
 
-function StatCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
+function StatCard({
+  label,
+  value,
+  sub,
+  subTone,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  subTone?: "profit" | "loss";
+}) {
   const theme = useTheme();
   return (
     <View
@@ -193,7 +206,11 @@ function StatCard({ label, value, sub }: { label: string; value: string; sub?: s
         {value}
       </Type>
       {sub ? (
-        <Type variant="caption" tone="tertiary">
+        <Type
+          variant="caption"
+          tone={subTone ?? "tertiary"}
+          style={subTone ? { fontWeight: "600" } : undefined}
+        >
           {sub}
         </Type>
       ) : null}

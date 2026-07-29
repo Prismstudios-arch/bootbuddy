@@ -14,6 +14,9 @@ export type Find = {
   estimatedValuePence: number | null;
   /** When the estimate was last refreshed, so the UI can flag stale ones. */
   valuedAt: string | null;
+  /** Value before the last refresh, and the movement since. */
+  previousValuePence: number | null;
+  valueChangePence: number | null;
   soldPricePence: number | null;
   feesPence: number;
   postagePence: number;
@@ -29,6 +32,8 @@ export type MonthPoint = { month: string; profitPence: number; sales: number };
 export type Stats = {
   realisedProfitPence: number;
   unrealisedProfitPence: number;
+  stockValuePence: number;
+  stockChangePence: number;
   thisMonthPence: number;
   lastMonthPence: number;
   totalSpentPence: number;

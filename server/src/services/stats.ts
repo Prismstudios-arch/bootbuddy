@@ -14,6 +14,9 @@ export type MonthPoint = { month: string; profitPence: number; sales: number };
 export type Stats = {
   realisedProfitPence: number;
   unrealisedProfitPence: number;
+  /** Current worth of everything in stock, and how it moved last refresh. */
+  stockValuePence: number;
+  stockChangePence: number;
   thisMonthPence: number;
   lastMonthPence: number;
   totalSpentPence: number;
@@ -56,6 +59,8 @@ export async function computeStats(db: Db, userId: string, now = new Date()): Pr
   const stats: Stats = {
     realisedProfitPence: 0,
     unrealisedProfitPence: 0,
+    stockValuePence: 0,
+    stockChangePence: 0,
     thisMonthPence: 0,
     lastMonthPence: 0,
     totalSpentPence: 0,
@@ -110,6 +115,10 @@ export async function computeStats(db: Db, userId: string, now = new Date()): Pr
     } else {
       stats.inStockCount += 1;
       stats.unrealisedProfitPence += unrealisedProfit(find) ?? 0;
+      stats.stockValuePence += find.estimatedValuePence ?? find.boughtPricePence;
+      if (find.previousValuePence !== null && find.estimatedValuePence !== null) {
+        stats.stockChangePence += find.estimatedValuePence - find.previousValuePence;
+      }
     }
   }
 

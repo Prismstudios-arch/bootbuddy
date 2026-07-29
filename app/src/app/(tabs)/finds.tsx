@@ -1,8 +1,10 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { FlatList, Pressable, View } from "react-native";
 import { useFinds, useRevalue, type Find, type FindStatus } from "@/api/finds";
 import { BackupPrompt } from "@/components/backup-prompt";
+import { PortfolioHeader } from "@/components/portfolio-header";
 import { EmptyState } from "@/components/empty-state";
 import { OfflineBanner } from "@/components/offline-banner";
 import { FindThumbnail } from "@/components/find-thumbnail";
@@ -44,6 +46,7 @@ export default function FindsScreen() {
 
       <OfflineBanner />
       <BackupPrompt findCount={finds.data?.length ?? 0} />
+      {filter !== "sold" ? <PortfolioHeader finds={finds.data ?? []} /> : null}
 
       <View style={{ flexDirection: "row", gap: space.sm, paddingBottom: space.md }}>
         {FILTERS.map((item) => (
@@ -171,9 +174,9 @@ function FindRow({ find, onPress }: { find: Find; onPress: () => void }) {
         padding: space.lg,
       })}
     >
-      <FindThumbnail findId={find.id} sold={sold} />
+      <FindThumbnail findId={find.id} sold={sold} size={60} />
 
-      <View style={{ flex: 1, gap: 2 }}>
+      <View style={{ flex: 1, gap: 3 }}>
         <Type variant="headline" numberOfLines={1}>
           {find.name}
         </Type>
@@ -185,6 +188,26 @@ function FindRow({ find, onPress }: { find: Find; onPress: () => void }) {
               ? ` · worth ~${formatPence(find.estimatedValuePence)}`
               : ""}
         </Type>
+        {/* Movement since the last refresh — the bit that makes a portfolio
+            feel alive rather than a static list of receipts. */}
+        {!sold && find.valueChangePence ? (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+            <Ionicons
+              name={find.valueChangePence > 0 ? "arrow-up" : "arrow-down"}
+              size={11}
+              color={find.valueChangePence > 0 ? theme.color.profit : theme.color.loss}
+            />
+            <Type
+              variant="caption"
+              style={{
+                color: find.valueChangePence > 0 ? theme.color.profit : theme.color.loss,
+                fontWeight: "600",
+              }}
+            >
+              {formatPence(Math.abs(find.valueChangePence))} since last check
+            </Type>
+          </View>
+        ) : null}
       </View>
 
       {hasProfit ? (

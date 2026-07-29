@@ -92,6 +92,10 @@ export const finds = pgTable(
     // from six months ago is a guess wearing a number's clothes, so the UI
     // says how stale it is rather than presenting it as current.
     valuedAt: timestamp("valued_at", { withTimezone: true }),
+    // The value before the last refresh. Without remembering where a figure
+    // came from there is no movement to show, and a portfolio of static
+    // numbers tells you nothing about which way things are going.
+    previousValuePence: integer("previous_value_pence"),
     soldPricePence: integer("sold_price_pence"),
     feesPence: integer("fees_pence").notNull().default(0),
     postagePence: integer("postage_pence").notNull().default(0),
