@@ -29,7 +29,7 @@ const SLIDES: Slide[] = [
   {
     icon: "search",
     title: "Know what it's worth\nbefore you buy",
-    body: "Point your camera at anything on the table. We'll tell you what it's fetching on eBay right now — before you hand over the 50p.",
+    body: "Point your camera at anything on the table. We'll work out exactly what it is and what it's worth — before you hand over the 50p.",
     accent: "gold",
   },
   {

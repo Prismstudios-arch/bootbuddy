@@ -321,7 +321,7 @@ export default function SettingsScreen() {
             tone="tertiary"
             style={{ textAlign: "center", marginVertical: space.xl }}
           >
-            Boot Sale Buddy {Constants.expoConfig?.version ?? "dev"} · Prices via eBay
+            Boot Sale Buddy {Constants.expoConfig?.version ?? "dev"} · Made in Northern Ireland
           </Type>
         </Pressable>
 
