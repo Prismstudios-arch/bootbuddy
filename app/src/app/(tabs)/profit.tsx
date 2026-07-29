@@ -2,6 +2,7 @@ import { RefreshControl, ScrollView, View } from "react-native";
 import { useStats } from "@/api/finds";
 import { CountUpPrice } from "@/components/count-up";
 import { EmptyState } from "@/components/empty-state";
+import { OfflineBanner } from "@/components/offline-banner";
 import { FindThumbnail } from "@/components/find-thumbnail";
 import { ProfitChart } from "@/components/profit-chart";
 import { Screen } from "@/components/screen";
@@ -31,6 +32,8 @@ export default function ProfitScreen() {
         <View style={{ paddingVertical: space.md }}>
           <Type variant="display">Profit</Type>
         </View>
+
+        <OfflineBanner />
         <View style={{ gap: space.lg, marginTop: space.xl }}>
           <Skeleton width="50%" height={56} />
           <Skeleton width="100%" height={96} />
@@ -72,6 +75,8 @@ export default function ProfitScreen() {
         <View style={{ paddingVertical: space.md }}>
           <Type variant="display">Profit</Type>
         </View>
+
+        <OfflineBanner />
 
         <View style={{ marginTop: space.lg, gap: space.xs }}>
           <Type variant="label" tone="secondary">

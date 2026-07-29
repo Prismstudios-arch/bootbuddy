@@ -3,6 +3,7 @@ import { useState } from "react";
 import { FlatList, Pressable, View } from "react-native";
 import { useFinds, type Find, type FindStatus } from "@/api/finds";
 import { EmptyState } from "@/components/empty-state";
+import { OfflineBanner } from "@/components/offline-banner";
 import { FindThumbnail } from "@/components/find-thumbnail";
 import { Pill } from "@/components/pill";
 import { Screen } from "@/components/screen";
@@ -38,6 +39,8 @@ export default function FindsScreen() {
       <View style={{ paddingVertical: space.md }}>
         <Type variant="display">My Finds</Type>
       </View>
+
+      <OfflineBanner />
 
       <View style={{ flexDirection: "row", gap: space.sm, paddingBottom: space.md }}>
         {FILTERS.map((item) => (
