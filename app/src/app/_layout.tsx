@@ -12,6 +12,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Onboarding } from "@/components/onboarding";
 import { ThemeProvider, useTheme } from "@/design/theme";
 import { queryClient } from "@/lib/query-client";
+import { usePurchasesIdentity } from "@/purchases/use-purchases-identity";
 import { useAppStore } from "@/state/app-store";
 
 // Splash stays up until fonts are ready — no flash of fallback type.
@@ -47,6 +48,8 @@ export default function RootLayout() {
 function ThemedShell() {
   const theme = useTheme();
   const hasOnboarded = useAppStore((s) => s.hasOnboarded);
+  // Identify the buyer to the store as soon as we know who they are.
+  usePurchasesIdentity();
 
   return (
     <>
