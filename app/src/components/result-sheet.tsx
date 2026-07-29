@@ -5,11 +5,11 @@ import { useRefineMutation, type AskingPrices, type Quota, type Scan } from "@/a
 import { useTheme } from "@/design/theme";
 import { radius, space } from "@/design/tokens";
 import { haptic } from "@/lib/haptics";
-import { openUrl } from "@/lib/links";
 import { formatPence } from "@/lib/money";
 import { Button } from "./button";
 import { CountUpPrice } from "./count-up";
 import { Pill } from "./pill";
+import { PriceLookup } from "./price-lookup";
 import { Sheet } from "./sheet";
 import { ResultSkeleton } from "./skeleton";
 import { Type } from "./type";
@@ -124,6 +124,10 @@ function SuccessBody({
 
           <RangeBar low={prices.lowPence} median={prices.medianPence} high={prices.highPence} />
 
+          {/* Our figure is a guide, not gospel — always leave a route to
+              the source for someone about to spend their own money. */}
+          <PriceLookup query={current.searchQuery} compact />
+
           <View
             style={{
               backgroundColor: theme.color.surface,
@@ -152,13 +156,18 @@ function SuccessBody({
             backgroundColor: theme.color.surface,
             borderRadius: radius.card,
             padding: space.lg,
-            gap: space.sm,
+            gap: space.md,
           }}
         >
-          <Type variant="headline">Market data unavailable</Type>
-          <Type variant="caption" tone="secondary">
-            We know what it is, but couldn&rsquo;t fetch prices just now.
-          </Type>
+          <View style={{ gap: space.xs }}>
+            <Type variant="headline">We know what it is</Type>
+            <Type variant="caption" tone="secondary">
+              No live price for this one — but here&rsquo;s the search, ready to go.
+            </Type>
+          </View>
+
+          <PriceLookup query={current.searchQuery} />
+
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Retry price lookup"
@@ -167,8 +176,8 @@ function SuccessBody({
               refine.mutate(current.searchQuery);
             }}
           >
-            <Type variant="headline" tone="profit">
-              Tap to retry
+            <Type variant="caption" tone="secondary">
+              Try our price lookup again
             </Type>
           </Pressable>
         </View>
@@ -227,23 +236,7 @@ function SuccessBody({
             onBought(current);
           }}
         />
-        <View style={{ flexDirection: "row", gap: space.sm }}>
-          <View style={{ flex: 1 }}>
-            <Button label="Skip" variant="ghost" onPress={onClose} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Button
-              label="Vinted"
-              variant="ghost"
-              onPress={() => {
-                haptic.tap();
-                void openUrl(
-                  `https://www.vinted.co.uk/catalog?search_text=${encodeURIComponent(current.searchQuery)}`,
-                );
-              }}
-            />
-          </View>
-        </View>
+        <Button label="Skip" variant="ghost" onPress={onClose} />
       </View>
 
       {quota ? (
