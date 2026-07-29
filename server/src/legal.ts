@@ -30,7 +30,7 @@ export type LegalDoc = {
 };
 
 const UPDATED = "28 July 2026";
-const CONTACT = "support@bootsalebuddy.app";
+const CONTACT = "bootsalebuddy@outlook.com";
 
 export const privacyDoc: LegalDoc = {
   id: "privacy",

@@ -35,7 +35,7 @@ export async function openAppleSubscriptions(): Promise<void> {
 
 export async function openSupportEmail(): Promise<void> {
   await openUrl(
-    "mailto:support@bootsalebuddy.app?subject=Boot%20Sale%20Buddy",
-    "No mail app is set up on this phone. You can reach us at support@bootsalebuddy.app.",
+    "mailto:bootsalebuddy@outlook.com?subject=Boot%20Sale%20Buddy",
+    "No mail app is set up on this phone. You can reach us at bootsalebuddy@outlook.com.",
   );
 }
