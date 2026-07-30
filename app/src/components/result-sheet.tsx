@@ -279,9 +279,12 @@ function priceCaption(prices: AskingPrices): string {
       : `Cheapest copies listed on Discogs · ${count} for sale`;
   }
   if (prices.source === "web") {
-    // Never "sold": this is what a live search found things listed at
-    // across UK marketplaces, and the wording has to keep saying so.
-    return `Listed for this across UK sites just now · ${count} listings`;
+    // A live search across UK marketplaces. Nearly always live listings —
+    // eBay's sold pages are barely indexed — so the wording has to keep
+    // saying which of the two you're looking at rather than blurring them.
+    return prices.basis === "sold"
+      ? `What these recently sold for · ${count} sales found`
+      : `Listed for this across UK sites just now · ${count} listings`;
   }
   return `Asking prices on eBay UK right now · ${count} listings`;
 }

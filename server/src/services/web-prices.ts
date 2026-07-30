@@ -11,55 +11,65 @@ import type { PriceResult } from "./pricing.js";
  * is worse than no price when someone is about to spend their own money.
  * That is exactly why the app has never done this.
  *
- * What makes it defensible here is grounding. With the google_search tool
- * the model runs real searches and the response carries `groundingMetadata`
- * listing the pages it actually read. So:
+ * What makes it defensible is that the model must actually go and look.
+ * With the google_search tool the response reports the searches it ran in
+ * `groundingMetadata.webSearchQueries`, and an answer that ran no searches
+ * is one it made up from memory — so it gets thrown away.
  *
- *  - No grounding chunks in the response? We throw the answer away. A price
- *    with nothing behind it is the failure mode we're guarding against, and
- *    it is indistinguishable from a good one by looking at the number.
- *  - The reply must parse as an exact one-line format. Prose gets binned
- *    rather than regex-mined for anything that looks like a price.
- *  - The figures must be internally coherent and in a sane range, or they
- *    go the same way.
+ * (The first cut of this checked `groundingChunks` instead, which is the
+ * stronger signal — per-sentence citations. It rejected every single answer
+ * in production. Chunks are only populated when there is prose to attach
+ * citations to, and this prompt deliberately asks for two bare lines, so the
+ * format defeated the guard. webSearchQueries is what's actually available
+ * here: proof a live search happened, not proof of each figure's provenance.
+ * Worth knowing that's the weaker of the two.)
  *
- * Even then this is ASKING prices — what things are listed at across UK
- * marketplaces — never sold prices, and it is labelled as such all the way
- * to the screen. Discogs stays ahead of it in the router because completed
- * sales beat listings every time.
+ * On top of that:
  *
- * Grounding is not free: it roughly doubles the upstream calls per scan and
- * adds a couple of seconds. Missing key or GEMINI_WEB_PRICES unset, and the
- * provider is simply skipped.
+ *  - The reply must parse as an exact format. Prose gets binned rather than
+ *    regex-mined for anything that looks like a price.
+ *  - The figures must be internally coherent and in a sane range.
+ *  - It must have seen at least three separate prices.
+ *  - NONE is explicitly offered as a good answer, so "I couldn't find out"
+ *    has somewhere to go that isn't a guess.
+ *
+ * The model reports whether its figures are completed sales or live
+ * listings, and that flows straight through to the label on screen. In
+ * practice it answers LISTED nearly every time — eBay's sold pages are
+ * barely indexed — which is a decent sign it isn't bluffing.
  */
 const PROMPT = `You price second-hand items for UK car-boot resellers.
 
-Search for what this actually sells for SECOND-HAND in the UK right now:
+Search for what this actually goes for SECOND-HAND in the UK right now:
 
   {QUERY}
 
-Look at real listings — eBay UK, Vinted, Gumtree, Facebook Marketplace, CeX,
-Music Magpie, specialist dealers. Ignore brand-new retail prices unless the
-item is only ever sold new. Ignore obvious outliers, job lots and broken or
+Search more than once if you need to. Prefer COMPLETED/SOLD prices (eBay
+sold listings, price guides, auction results). If you can only find live
+listings, use those instead. Look at eBay UK, Vinted, Gumtree, Facebook
+Marketplace, CeX, Music Magpie and specialist dealers. Ignore brand-new
+retail prices unless the item is only ever sold new, and ignore job lots and
 spares-or-repair listings.
 
-Reply with ONE line and nothing else, in exactly this format:
+Reply with exactly two lines and nothing else:
 
-PRICES <low>|<median>|<high>|<count>
+PRICES <low>|<median>|<high>|<count>|<SOLD or LISTED>
+SOURCES <the sites you actually used, comma separated>
 
-  - GBP, plain numbers, two decimals, no currency symbols and no commas.
-  - <low> and <high> are the cheapest and dearest genuine examples you saw.
+  - GBP, plain numbers, two decimals, no currency symbols, no commas.
+  - <low> and <high> are the cheapest and dearest genuine examples.
   - <median> is the typical price and must sit between them.
-  - <count> is how many separate listings you actually looked at.
+  - <count> is how many separate prices you actually saw.
+  - SOLD only if those are completed sales. Otherwise LISTED.
 
-If you found fewer than three genuine second-hand listings, reply with
-exactly:
+If you found fewer than three genuine second-hand prices, reply with exactly:
 
 NONE
 
-Do not guess and do not estimate from memory. NONE is a good answer.`;
+Do not guess and do not price from memory. NONE is a good answer.`;
 
-const LINE = /PRICES\s+(\d+(?:\.\d+)?)\s*\|\s*(\d+(?:\.\d+)?)\s*\|\s*(\d+(?:\.\d+)?)\s*\|\s*(\d+)/i;
+const LINE =
+  /PRICES\s+(\d+(?:\.\d+)?)\s*\|\s*(\d+(?:\.\d+)?)\s*\|\s*(\d+(?:\.\d+)?)\s*\|\s*(\d+)\s*\|\s*(SOLD|LISTED)/i;
 
 /** £0.50 to £50,000. Outside that we've misread something, not found a bargain. */
 const MIN_PENCE = 50;
@@ -70,6 +80,9 @@ type GroundedResponse = {
   candidates?: Array<{
     content?: { parts?: Array<{ text?: string }> };
     groundingMetadata?: {
+      /** The searches the model actually ran. Empty means it didn't look. */
+      webSearchQueries?: string[];
+      /** Per-sentence citations. Only populated when the answer is prose. */
       groundingChunks?: Array<{ web?: { uri?: string; title?: string } }>;
     };
   }>;
@@ -100,7 +113,7 @@ export async function searchWebPrices(query: string): Promise<PriceResult | null
       body: JSON.stringify({
         contents: [{ parts: [{ text: PROMPT.replace("{QUERY}", query) }] }],
         tools: [{ google_search: {} }],
-        generationConfig: { temperature: 0, maxOutputTokens: 800 },
+        generationConfig: { temperature: 0, maxOutputTokens: 2048 },
       }),
     });
   } catch (err) {
@@ -117,12 +130,12 @@ export async function searchWebPrices(query: string): Promise<PriceResult | null
   const candidate = json.candidates?.[0];
   const text = candidate?.content?.parts?.map((p) => p.text ?? "").join(" ") ?? "";
 
-  // The whole safety argument rests on this check. An answer the model
-  // produced without reading anything is a guess wearing a number's
-  // clothes, and we cannot tell the difference downstream.
-  const sources = candidate?.groundingMetadata?.groundingChunks ?? [];
-  if (sources.length === 0) {
-    logger.info({ query }, "web price answer had no grounding — discarded");
+  // The safety argument rests on this: an answer produced without running a
+  // single search is a guess wearing a number's clothes, and nothing
+  // downstream can tell it apart from a good one.
+  const searches = candidate?.groundingMetadata?.webSearchQueries ?? [];
+  if (searches.length === 0) {
+    logger.info({ query }, "web price answer ran no searches — discarded");
     return null;
   }
 
@@ -146,10 +159,12 @@ export async function searchWebPrices(query: string): Promise<PriceResult | null
   }
   if (!Number.isFinite(listingCount) || listingCount < MIN_LISTINGS) return null;
 
-  logger.info(
-    { query, median, listingCount, sources: sources.length },
-    "priced from web search",
-  );
+  // Only the model's explicit SOLD claim earns the "sold" label. Anything
+  // else — including a missing or unexpected token — reads as asking, which
+  // is the answer that can't overstate what an item fetches.
+  const basis = match[5]!.toUpperCase() === "SOLD" ? "sold" : "asking";
+
+  logger.info({ query, median, listingCount, basis, searches: searches.length }, "priced from web");
 
   return {
     lowPence: low,
@@ -158,6 +173,6 @@ export async function searchWebPrices(query: string): Promise<PriceResult | null
     listingCount,
     maxBuyPence: suggestedMaxBuy(median),
     source: "web",
-    basis: "asking",
+    basis,
   };
 }

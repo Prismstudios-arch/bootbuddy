@@ -33,9 +33,43 @@ type PurchasesModule = any;
 type StoreError = {
   userCancelled?: boolean;
   readableErrorCode?: string;
+  code?: string | number;
   message?: string;
   underlyingErrorMessage?: string;
+  /** react-native-purchases puts the useful fields in here on iOS. */
+  userInfo?: {
+    userCancelled?: boolean;
+    readableErrorCode?: string;
+    code?: string | number;
+    message?: string;
+    underlyingErrorMessage?: string;
+    NSUnderlyingError?: { localizedDescription?: string };
+  };
 };
+
+/**
+ * Flatten the two shapes the SDK throws.
+ *
+ * Build 7 surfaced a bare "Couldn't complete that purchase." with no code
+ * appended, which only happens when readableErrorCode is undefined — and it
+ * is undefined at the top level, because on iOS the SDK nests everything
+ * under `userInfo`. Reading only the top level threw away the one piece of
+ * information the message existed to carry.
+ */
+function flatten(error: StoreError) {
+  const info = error.userInfo ?? {};
+  return {
+    cancelled: error.userCancelled ?? info.userCancelled ?? false,
+    code: error.readableErrorCode ?? info.readableErrorCode,
+    numericCode: error.code ?? info.code,
+    detail:
+      error.underlyingErrorMessage ??
+      info.underlyingErrorMessage ??
+      info.NSUnderlyingError?.localizedDescription ??
+      error.message ??
+      info.message,
+  };
+}
 
 /**
  * Why the purchase failed, in words, plus the code when we haven't got words
@@ -69,11 +103,17 @@ const ERROR_COPY: Record<string, string> = {
 };
 
 function storeErrorMessage(error: StoreError, fallback: string): string {
-  const code = error.readableErrorCode;
+  const { code, numericCode, detail } = flatten(error);
   if (code && ERROR_COPY[code]) return ERROR_COPY[code];
-  // Unmapped: show the code. Ugly, but it turns "it doesn't work" into
-  // something that can actually be looked up.
-  return code ? `${fallback} (${code})` : fallback;
+
+  // Unmapped: show whatever we've got. Ugly on screen, but it turns "it
+  // doesn't work" into something that can be looked up, and a paywall that
+  // fails anonymously is unfixable for whoever's on the other end of it.
+  const clue = code ?? (numericCode !== undefined ? `code ${numericCode}` : null);
+  if (clue && detail) return `${fallback} (${clue}: ${detail})`;
+  if (clue) return `${fallback} (${clue})`;
+  if (detail) return `${fallback} (${detail})`;
+  return fallback;
 }
 
 export class RevenueCatPurchases implements PurchasesProvider {
@@ -119,7 +159,7 @@ export class RevenueCatPurchases implements PurchasesProvider {
           : entry;
       });
     } catch (error) {
-      console.warn("couldn't load offerings", (error as StoreError).readableErrorCode);
+      console.warn("couldn't load offerings", JSON.stringify(flatten(error as StoreError)));
       return CATALOGUE;
     }
   }
@@ -145,8 +185,8 @@ export class RevenueCatPurchases implements PurchasesProvider {
     } catch (error) {
       const err = error as StoreError;
       // RevenueCat flags a user-initiated cancel; that isn't an error.
-      if (err.userCancelled) return { status: "cancelled" };
-      console.warn("purchase failed", err.readableErrorCode, err.message, err.underlyingErrorMessage);
+      if (flatten(err).cancelled) return { status: "cancelled" };
+      console.warn("purchase failed", JSON.stringify(flatten(err)));
       return { status: "error", message: storeErrorMessage(err, "Couldn't complete that purchase.") };
     }
   }
@@ -160,7 +200,7 @@ export class RevenueCatPurchases implements PurchasesProvider {
         : { status: "nothing_to_restore" };
     } catch (error) {
       const err = error as StoreError;
-      console.warn("restore failed", err.readableErrorCode, err.message);
+      console.warn("restore failed", JSON.stringify(flatten(err)));
       return { status: "error", message: storeErrorMessage(err, "Couldn't restore purchases.") };
     }
   }
