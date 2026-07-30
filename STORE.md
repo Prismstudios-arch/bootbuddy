@@ -9,6 +9,7 @@ this file changes in the same commit.
 | Field | Value |
 |---|---|
 | App name | `Boot Sale Buddy: Flip Scanner` (30 char limit — this is 29) |
+| Home screen label | `BootBuddy` (`CFBundleDisplayName`) — iOS truncates a home screen label at about 12 characters, so "BootSaleBuddy" showed as "BootSaleB…". The App Store name above is unaffected; the two are allowed to differ and usually should. |
 | Subtitle | `Scan it. Price it. Flip it.` (28 chars) |
 | Bundle ID | `com.bootsalebuddy.app` |
 | SKU | `bootsalebuddy-ios` |

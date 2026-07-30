@@ -15,7 +15,7 @@
         "NSCameraUsageDescription": "Boot Sale Buddy uses the camera to identify items and estimate their resale value. Photos are processed and then discarded — never stored on our servers.",
         "NSPhotoLibraryUsageDescription": "Pick a photo you've already taken and Boot Sale Buddy will price it up. The photo is processed and then discarded — never stored on our servers.",
         "ITSAppUsesNonExemptEncryption": false,
-        "CFBundleDisplayName": "BootSaleBuddy"
+        "CFBundleDisplayName": "BootBuddy"
       },
       "config": {
         "usesNonExemptEncryption": false
