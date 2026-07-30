@@ -52,6 +52,12 @@ packages: `app/` (Expo SDK 57, expo-router, TypeScript strict) and `server/`
   `anthropic`. Providers live in `services/vision-*.ts` and must return the
   schema in `services/vision.ts` — validate with `toIdentification()`, never
   trust raw provider JSON.
+- Prices come from a router (`services/pricing.ts`) in confidence order:
+  Discogs completed sales, then eBay listings, then a grounded Gemini web
+  search (`GEMINI_WEB_PRICES=1`). **A model-derived price is only ever kept
+  when the response carries grounding citations** — no citations means it
+  answered from memory, and memory invents prices. It is `basis: "asking"`
+  and must never be labelled sold.
 - eBay and RevenueCat keys are optional: missing eBay → `askingPrices: null`
   and the app shows "market data unavailable". Never make the server refuse
   to boot over an optional integration.

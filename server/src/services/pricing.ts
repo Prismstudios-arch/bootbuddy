@@ -2,6 +2,7 @@ import { logger } from "../logger.js";
 import type { Pence } from "../lib/money.js";
 import { searchAskingPrices } from "./ebay.js";
 import { searchDiscogsPrices } from "./discogs.js";
+import { searchWebPrices } from "./web-prices.js";
 
 /**
  * Which source priced an item, and whether those numbers are what things
@@ -13,7 +14,7 @@ import { searchDiscogsPrices } from "./discogs.js";
  * price suggestions come from completed sales. Same shape, very different
  * confidence, and the user deserves to know which they're looking at.
  */
-export type PriceSource = "ebay" | "discogs";
+export type PriceSource = "ebay" | "discogs" | "web";
 export type PriceBasis = "asking" | "sold";
 
 export type PriceResult = {
@@ -45,6 +46,12 @@ function isMusic(category: string | undefined): boolean {
  * Tries the best-suited source first and falls back. Every provider returns
  * null rather than throwing on failure, so one being down or unconfigured
  * degrades to the next instead of failing the scan.
+ *
+ * The order is a confidence order, not a convenience one. Discogs knows what
+ * copies actually sold for; eBay knows what a catalogue of live listings
+ * says; a grounded web search knows what a handful of pages said a moment
+ * ago. Each is a step down in certainty, so each only runs when the one
+ * above it came back with nothing.
  */
 export const lookupPrices: PriceLookup = async (query, category) => {
   if (isMusic(category)) {
@@ -63,5 +70,7 @@ export const lookupPrices: PriceLookup = async (query, category) => {
     if (discogs) return discogs;
   }
 
-  return null;
+  // Last resort, and the only one that covers a toaster or a Denby dinner
+  // set. Off unless GEMINI_WEB_PRICES is set.
+  return await searchWebPrices(query);
 };

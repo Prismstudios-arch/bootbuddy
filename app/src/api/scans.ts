@@ -8,7 +8,7 @@ export type AskingPrices = {
   listingCount: number;
   maxBuyPence: number;
   /** Which source priced it. */
-  source: "ebay" | "discogs";
+  source: "ebay" | "discogs" | "web";
   /** Completed sales, or what sellers are currently asking. */
   basis: "sold" | "asking";
 };

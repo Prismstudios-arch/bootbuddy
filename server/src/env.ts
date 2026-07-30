@@ -24,6 +24,14 @@ const base = z.object({
   VISION_PROVIDER: z.enum(["gemini", "anthropic"]).default("gemini"),
   GEMINI_API_KEY: z.string().optional(),
   GEMINI_MODEL: z.string().default("gemini-2.5-flash"),
+  // Price anything (not just records) by having Gemini search the live web
+  // and keeping only answers it can cite. Off unless explicitly enabled: it
+  // roughly doubles the upstream calls per scan and adds a couple of
+  // seconds, so it should be a decision rather than a surprise.
+  GEMINI_WEB_PRICES: z
+    .string()
+    .optional()
+    .transform((v) => v === "1" || v?.toLowerCase() === "true"),
   ANTHROPIC_API_KEY: z.string().startsWith("sk-ant-").optional(),
   ANTHROPIC_MODEL: z.string().default("claude-haiku-4-5"),
 

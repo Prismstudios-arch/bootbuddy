@@ -50,7 +50,9 @@ export function SoldSheet({
   };
 
   return (
-    <Sheet onClose={onClose}>
+    // Only ever opened from the find detail screen, which is a pushed route
+    // with no tab bar to clear.
+    <Sheet onClose={onClose} overTabBar={false}>
       <View style={{ gap: space.lg }}>
         <View style={{ gap: space.xs }}>
           <Type variant="title">{find.name}</Type>

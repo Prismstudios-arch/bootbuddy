@@ -278,6 +278,11 @@ function priceCaption(prices: AskingPrices): string {
       ? `What copies actually sold for on Discogs · ${count} for sale now`
       : `Cheapest copies listed on Discogs · ${count} for sale`;
   }
+  if (prices.source === "web") {
+    // Never "sold": this is what a live search found things listed at
+    // across UK marketplaces, and the wording has to keep saying so.
+    return `Listed for this across UK sites just now · ${count} listings`;
+  }
   return `Asking prices on eBay UK right now · ${count} listings`;
 }
 

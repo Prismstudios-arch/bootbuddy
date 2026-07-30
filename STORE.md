@@ -32,6 +32,15 @@ wastes characters. `car boot` is one word here because "boot" already
 appears in the name and Apple combines terms, while `carboot` also catches
 people who type it that way. Singular forms match plurals automatically.
 
+> **If you switch `GEMINI_WEB_PRICES` on, this file changes with it.** The
+> description and the review notes below both say there is no live price
+> source outside records and CDs. That stops being true the moment grounded
+> web pricing is enabled, and a listing that undersells the app is only
+> marginally better than one that oversells it. The lines to rewrite are the
+> "One tap to eBay sold prices for anything else" bullet, the HONEST ABOUT
+> PRICES paragraph, and the ABOUT THE PRICES paragraph in the review notes.
+> Screenshots 02–04 stop needing to be a record, too.
+
 ## Description
 
 ```

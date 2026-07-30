@@ -343,7 +343,7 @@ function EditSheet({ find, onClose }: { find: Find; onClose: () => void }) {
   };
 
   return (
-    <Sheet onClose={onClose}>
+    <Sheet onClose={onClose} overTabBar={false}>
       <View style={{ gap: space.lg }}>
         <Type variant="title">Edit find</Type>
 

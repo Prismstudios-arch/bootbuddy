@@ -4,6 +4,7 @@ import Animated, { Easing, FadeIn, SlideInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/design/theme";
 import { motion, radius, space } from "@/design/tokens";
+import { useTabBarHeight } from "@/lib/tab-bar";
 
 const absoluteFill = { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 } as const;
 
@@ -17,15 +18,26 @@ export function Sheet({
   children,
   footer,
   maxHeightPercent = 88,
+  overTabBar = true,
 }: {
   onClose: () => void;
   children: ReactNode;
   /** Pinned below the scroll area — for a CTA that must never scroll away. */
   footer?: ReactNode;
   maxHeightPercent?: number;
+  /**
+   * Whether this sheet opens over a tab screen. The tab bar floats above
+   * screen content, so a sheet anchored to the bottom of the window has its
+   * last 80-odd points hidden behind it — which on the paywall meant the buy
+   * button was underneath the tab bar. Pushed screens (find detail) have no
+   * tab bar, so they pass false.
+   */
+  overTabBar?: boolean;
 }) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const tabBarHeight = useTabBarHeight();
+  const bottomInset = overTabBar ? tabBarHeight : insets.bottom;
 
   return (
     <View style={{ ...absoluteFill, justifyContent: "flex-end" }}>
@@ -60,7 +72,7 @@ export function Sheet({
             borderTopLeftRadius: radius.sheet,
             borderTopRightRadius: radius.sheet,
             paddingTop: space.md,
-            paddingBottom: insets.bottom + space.lg,
+            paddingBottom: bottomInset + space.lg,
             maxHeight: `${maxHeightPercent}%`,
           }}
         >
@@ -75,6 +87,11 @@ export function Sheet({
             }}
           />
           <ScrollView
+            // flexShrink lets the scroll area give ground to the footer. A
+            // ScrollView with no flex takes its full content height and
+            // shoves the footer out of the sheet entirely, so a tall sheet
+            // loses exactly the button it exists to show.
+            style={{ flexShrink: 1 }}
             contentContainerStyle={{ paddingHorizontal: space.gutter, paddingBottom: space.md }}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="interactive"

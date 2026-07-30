@@ -30,6 +30,52 @@ const ENTITLEMENT_ID = "pro";
 
 type PurchasesModule = any;
 
+type StoreError = {
+  userCancelled?: boolean;
+  readableErrorCode?: string;
+  message?: string;
+  underlyingErrorMessage?: string;
+};
+
+/**
+ * Why the purchase failed, in words, plus the code when we haven't got words
+ * for it.
+ *
+ * "Couldn't complete that purchase." was true and completely useless: for a
+ * one-man app it turns every failure into an unanswerable support email, and
+ * it hid the difference between "the App Store is down" and "these products
+ * were never set up". RevenueCat already tells us which; there is no reason
+ * to throw that away.
+ */
+const ERROR_COPY: Record<string, string> = {
+  PRODUCT_NOT_AVAILABLE_FOR_PURCHASE_ERROR:
+    "That plan isn't on sale in your App Store country yet.",
+  PRODUCT_ALREADY_PURCHASED_ERROR: "You already own this one — tap Restore purchases.",
+  RECEIPT_ALREADY_IN_USE_ERROR:
+    "This purchase is already tied to another account. Tap Restore purchases.",
+  PURCHASE_NOT_ALLOWED_ERROR:
+    "This Apple ID isn't allowed to buy — check Screen Time restrictions.",
+  PURCHASE_INVALID_ERROR: "The App Store turned that payment down. Check your payment method.",
+  PAYMENT_PENDING_ERROR: "Your payment is waiting on approval. We'll unlock Pro once it clears.",
+  STORE_PROBLEM_ERROR: "The App Store is having a moment. Give it a minute and try again.",
+  NETWORK_ERROR: "Couldn't reach the App Store. Check your signal?",
+  OFFLINE_CONNECTION_ERROR: "You're offline. Try again when you've got signal.",
+  CONFIGURATION_ERROR:
+    "Buddy Pro isn't set up properly on our end. That's ours to fix — drop us a line.",
+  INVALID_CREDENTIALS_ERROR:
+    "Buddy Pro isn't set up properly on our end. That's ours to fix — drop us a line.",
+  INELIGIBLE_ERROR: "You've had the free trial already — pick a plan to carry on.",
+  OPERATION_ALREADY_IN_PROGRESS_ERROR: "There's already a purchase going through. Hang on a sec.",
+};
+
+function storeErrorMessage(error: StoreError, fallback: string): string {
+  const code = error.readableErrorCode;
+  if (code && ERROR_COPY[code]) return ERROR_COPY[code];
+  // Unmapped: show the code. Ugly, but it turns "it doesn't work" into
+  // something that can actually be looked up.
+  return code ? `${fallback} (${code})` : fallback;
+}
+
 export class RevenueCatPurchases implements PurchasesProvider {
   readonly isMock = false;
   private purchases: PurchasesModule | undefined;
@@ -54,7 +100,13 @@ export class RevenueCatPurchases implements PurchasesProvider {
       const Purchases = await this.module();
       const offerings = await Purchases.getOfferings();
       const packages = offerings.current?.availablePackages ?? [];
-      if (packages.length === 0) return CATALOGUE;
+      if (packages.length === 0) {
+        // Falling back to our own copy means the paywall shows plausible
+        // prices for products the store has never heard of, and the failure
+        // only shows up when someone tries to buy. Say so in the log.
+        console.warn("no RevenueCat packages in the current offering — showing fallback prices");
+        return CATALOGUE;
+      }
 
       // Keep our copy and ordering; take live prices from the store so the
       // paywall is correct in every currency and region.
@@ -66,7 +118,8 @@ export class RevenueCatPurchases implements PurchasesProvider {
           ? { ...entry, priceLabel: match.product.priceString }
           : entry;
       });
-    } catch {
+    } catch (error) {
+      console.warn("couldn't load offerings", (error as StoreError).readableErrorCode);
       return CATALOGUE;
     }
   }
@@ -84,11 +137,17 @@ export class RevenueCatPurchases implements PurchasesProvider {
       const active = customerInfo?.entitlements?.active?.[ENTITLEMENT_ID];
       return active
         ? { status: "purchased", entitlement: packageId === "lifetime" ? "lifetime" : "pro" }
-        : { status: "error", message: "The purchase didn't go through." };
+        : {
+            status: "error",
+            message:
+              "The App Store took the payment but Pro didn't unlock. Tap Restore purchases in a minute.",
+          };
     } catch (error) {
+      const err = error as StoreError;
       // RevenueCat flags a user-initiated cancel; that isn't an error.
-      if ((error as { userCancelled?: boolean }).userCancelled) return { status: "cancelled" };
-      return { status: "error", message: "Couldn't complete that purchase." };
+      if (err.userCancelled) return { status: "cancelled" };
+      console.warn("purchase failed", err.readableErrorCode, err.message, err.underlyingErrorMessage);
+      return { status: "error", message: storeErrorMessage(err, "Couldn't complete that purchase.") };
     }
   }
 
@@ -99,8 +158,10 @@ export class RevenueCatPurchases implements PurchasesProvider {
       return customerInfo?.entitlements?.active?.[ENTITLEMENT_ID]
         ? { status: "restored", entitlement: "pro" }
         : { status: "nothing_to_restore" };
-    } catch {
-      return { status: "error", message: "Couldn't restore purchases." };
+    } catch (error) {
+      const err = error as StoreError;
+      console.warn("restore failed", err.readableErrorCode, err.message);
+      return { status: "error", message: storeErrorMessage(err, "Couldn't restore purchases.") };
     }
   }
 }
