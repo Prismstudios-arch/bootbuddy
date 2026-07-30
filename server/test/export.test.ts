@@ -79,7 +79,7 @@ describe("GET /v1/finds/export", () => {
       body: JSON.stringify({
         name: "Sony Walkman, boxed",
         boughtPricePence: 50,
-        notes: "Car boot, Lisburn",
+        notes: "Sunday boot sale, second row",
       }),
     });
     const { find } = (await created.json()) as { find: { id: string } };
@@ -111,7 +111,7 @@ describe("GET /v1/finds/export", () => {
     expect(row).toContain("0.50");
     expect(row).toContain("42.00");
     expect(row).toContain("32.55");
-    expect(row).toContain("Car boot");
+    expect(row).toContain("Sunday boot sale");
   });
 
   it("returns just the header row for an empty portfolio", async () => {

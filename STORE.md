@@ -32,14 +32,12 @@ wastes characters. `car boot` is one word here because "boot" already
 appears in the name and Apple combines terms, while `carboot` also catches
 people who type it that way. Singular forms match plurals automatically.
 
-> **If you switch `GEMINI_WEB_PRICES` on, this file changes with it.** The
-> description and the review notes below both say there is no live price
-> source outside records and CDs. That stops being true the moment grounded
-> web pricing is enabled, and a listing that undersells the app is only
-> marginally better than one that oversells it. The lines to rewrite are the
-> "One tap to eBay sold prices for anything else" bullet, the HONEST ABOUT
-> PRICES paragraph, and the ABOUT THE PRICES paragraph in the review notes.
-> Screenshots 02–04 stop needing to be a record, too.
+> **This description assumes `GEMINI_WEB_PRICES` is on.** With it off, the
+> app can only price records, CDs and tapes, and the "any category" claims
+> below become false — rewrite the WHAT YOU GET bullets, the HONEST ABOUT
+> PRICES paragraph and the ABOUT THE PRICES review note, and put a record
+> back in screenshots 02–04. A listing must never describe a screen the
+> build can't render.
 
 ## Description
 
@@ -47,18 +45,18 @@ people who type it that way. Singular forms match plurals automatically.
 Point your camera at anything at a car boot sale and find out what it's
 worth — before you hand over the 50p.
 
-Boot Sale Buddy identifies the item from a photo, then helps you work out
-what it's actually worth and the most you should sensibly pay once selling
-fees and postage are taken off. No more standing in a field squinting at a
-half-rubbed-off model number.
+Boot Sale Buddy identifies the item from a photo, checks what ones like it
+are going for right now, and tells you the most you should sensibly pay
+once selling fees and postage come off. No more standing in a field
+squinting at a half-rubbed-off model number.
 
 Then it keeps score. Log what you paid, log what it sold for, and watch
 your profit stack up like a trading portfolio.
 
 WHAT YOU GET
 • Instant recognition — brand and model, not just "a cassette player"
-• Records and CDs priced from real completed sales on Discogs
-• One tap to eBay sold prices for anything else, search already filled in
+• Live prices for pretty much anything: tech, china, toys, tools, games
+• Records and CDs priced from what copies actually sold for
 • A suggested maximum buy price, so you know when to walk away
 • Log buys in two taps — built for cold hands and bad signal
 • Or add anything by hand: job lots, boxes of bits, stuff you bought years ago
@@ -66,13 +64,15 @@ WHAT YOU GET
 • Automatic profit maths after selling fees and postage
 • Your whole haul in one place: in stock, sold, and what you're up
 • Search your finds, and see how long each one's been sitting
+• One tap through to eBay, Vinted or Amazon to check for yourself
 • Share a card of your best flips
 
 HONEST ABOUT PRICES
-For records and CDs we show what copies actually sold for. For everything
-else we take you straight to eBay's sold listings with the search already
-worked out — because inventing a number would be worse than useless when
-you're about to spend your own money. Treat it as research, not a
+Most prices are what similar items are listed at right now, not what they
+finally sold for — we say which you're looking at, every time. For records
+and CDs we can show real completed sales, so we do. Nothing is ever
+invented: if we can't find enough genuine listings, we say so and hand you
+the search instead of a made-up number. Treat it as research, not a
 valuation.
 
 BUDDY PRO
@@ -81,15 +81,15 @@ Pro gives you unlimited scans, CSV export for your tax return and your
 whole haul backed up, from £1.99/month or £12.99/year — less than one good
 flip.
 
-Made in Northern Ireland for anyone who's ever paid 50p for something
-worth £40.
+Built by one person, for anyone who's ever paid 50p for something worth
+£40.
 ```
 
 ## Promotional text (170 chars, changeable without review)
 
 ```
-Records and CDs now priced from real completed sales. Point, scan, and know
-what it's worth before you buy.
+Now prices almost anything, not just records. Point, scan, and know what
+it's worth before you hand the money over.
 ```
 
 ## URLs
@@ -160,11 +160,13 @@ the shutter and pick any photo of an object from the library instead — it
 goes through exactly the same flow.
 
 ABOUT THE PRICES: for records and CDs the app shows prices derived from
-completed sales on Discogs, and labels them as such. For every other
-category no live price source is available to us, so the app says so
-plainly and offers one-tap links to eBay sold listings, Vinted and Google
-Shopping with the search term pre-filled. We deliberately never invent or
-estimate a price.
+completed sales on Discogs and labels them as such. For other categories it
+runs a live web search and reports what similar items are currently LISTED
+at, labelled as asking prices, never as sold. Prices the search cannot back
+with real sources are discarded rather than shown, and the app then says it
+has no price and offers one-tap links to eBay, Vinted and Google Shopping
+with the search term pre-filled. We deliberately never invent or estimate a
+price.
 
 Account deletion is in Settings -> Delete account & data, and removes all
 server-side data immediately.
@@ -198,25 +200,27 @@ that order — they carry the pitch on their own.
 | 08 | Share card | Share the wins |
 | 09 | Paywall | Less than one good flip |
 
-**Shots 02, 03 and 04 must stay a record, and that is not a styling
-choice.** They're the only three that show a live price, a price range and a
-max-buy figure, and records, CDs and tapes are the only category the app can
-produce those for. Everything else gets the honest "no live price — here's
-the search" panel, so a priced-up anything-else would be advertising a
-screen the app cannot render: a 2.3.3 rejection risk, and a lie to whoever
-installs on the strength of it. If eBay (or another source) ever comes
-through, that constraint lifts and any category can carry those shots.
+**Shots 02, 03 and 04 show a live price, a range and a max-buy figure, so
+they depend on `GEMINI_WEB_PRICES` being on.** With it off the app can only
+price records, CDs and tapes, and a priced-up RAM kit would be advertising a
+screen the build cannot render — a 2.3.3 rejection risk and a lie to whoever
+installs on the strength of it. Put a record back in these three if the flag
+ever comes off.
 
-Two spots take your own photography, both optional:
+**Every figure in the set is researched, not invented.** The Corsair kit on
+02–04 is at £45 because that is what a used one sold for on eBay UK, inside
+a £34–£62 spread from live listings; the max buy is 40% of the median,
+which is the arithmetic in `server/src/lib/money.ts`. The portfolio rows and
+the Profit tab reconcile with each other — the haul value is the two
+in-stock rows added up, and "best flip ever" really is the largest. If you
+re-shoot, keep them reconciling: one number that doesn't add up makes a
+viewer distrust all the others.
 
-| File | Used for | If missing |
-|---|---|---|
-| `raw/item.jpg` | The scanned item on 01, and its thumbnail on 05–08 | A drawn cassette player |
-| `raw/record.jpg` | The record on 02–04 | A drawn sleeve and disc |
-
-Drop a **phone screenshot** in either slot and the script trims the status
-bar, shutter and tab bar off it automatically — anything taller than 2:1 is
-assumed to be a capture. An ordinary photo passes through untouched.
+Drop your own photo at `raw/item.jpg` (jpg, jpeg or png) and it's used for
+the scanned item on 01 and its thumbnail on 05–08; without one you get a
+drawn cassette player. A **phone screenshot** works — the script trims the
+status bar, shutter and tab bar off anything taller than 2:1. An ordinary
+photo passes through untouched.
 
 Do not use the empty states in screenshots. An empty app looks like a
 broken app.

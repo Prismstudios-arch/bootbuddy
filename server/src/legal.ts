@@ -189,7 +189,7 @@ export const termsDoc: LegalDoc = {
     },
     {
       heading: "Law",
-      paragraphs: ["These terms are governed by the law of Northern Ireland."],
+      paragraphs: ["These terms are governed by the laws of the United Kingdom."],
     },
   ],
 };

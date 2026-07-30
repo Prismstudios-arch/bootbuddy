@@ -173,79 +173,6 @@ function walkman(x, y, w, opts = {}) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Record artwork
-//
-// Shots 2 and 3 have to be a record, and that is not a styling choice.
-// Those two screens show a live price, a price range and a max-buy figure,
-// and the ONLY category the app can produce those for is records, CDs and
-// tapes, priced from completed sales on Discogs. Everything else gets the
-// honest "no live price — here's the search" panel. Showing a priced-up RAM
-// kit would be advertising a screen the app cannot render, which is both a
-// 2.3.3 rejection risk and a lie to someone deciding whether to install.
-//
-// Drawn rather than photographed, and deliberately abstract: a recognisable
-// album cover is someone else's copyright and has no business in our
-// marketing. Drop a photo of a record you own at
-// assets/screenshots/raw/record.jpg and it's used instead.
-// ---------------------------------------------------------------------------
-const RECORD_PHOTO = await loadPhoto(
-  ["record.jpg", "record.jpeg", "record.png"],
-  "using your record photo",
-);
-
-/**
- * A sleeve with the disc pulled half out of it, in a w-wide box.
- *
- * The disc has to come far enough out that its label shows: tucked fully
- * inside the sleeve it's a dark crescent on a dark background and the whole
- * thing reads as a grey square. Geometry is sized so the label clears the
- * sleeve's opening edge.
- */
-function recordSleeve(x, y, w) {
-  const sleeve = w * 0.6;
-  if (RECORD_PHOTO) {
-    return `<image href="${RECORD_PHOTO}" x="${x}" y="${y}" width="${w}" height="${w * 0.6}" preserveAspectRatio="xMidYMid slice" clip-path="inset(0 round ${w * 0.02})"/>`;
-  }
-
-  const d = sleeve * 0.98;
-  const cx = x + w - d / 2;
-  const cy = y + sleeve / 2;
-  // Values are pitched bright, because everything drawn here sits under the
-  // result sheet's 55% scrim: a sleeve that looks right on its own vanishes
-  // into the background once the sheet is over it.
-  const grooves = [0.93, 0.84, 0.75, 0.66, 0.57, 0.48]
-    .map(
-      (t) =>
-        `<circle cx="${cx}" cy="${cy}" r="${(d / 2) * t}" fill="none" stroke="#544C43" stroke-width="${w * 0.004}"/>`,
-    )
-    .join("");
-
-  return (
-    // Disc first, so the sleeve sits over its left edge.
-    `<circle cx="${cx}" cy="${cy}" r="${d / 2}" fill="#2A2521"/>` +
-    grooves +
-    // A sheen across the vinyl — the thing that makes it read as a record
-    // rather than a dark circle.
-    `<path d="M ${cx - d * 0.4} ${cy - d * 0.24} a ${d / 2} ${d / 2} 0 0 1 ${d * 0.7} ${-d * 0.1}" fill="none" stroke="#B4A99A" stroke-width="${w * 0.011}" stroke-linecap="round" opacity="0.55"/>` +
-    `<circle cx="${cx}" cy="${cy}" r="${d * 0.19}" fill="#D2653F"/>` +
-    `<circle cx="${cx}" cy="${cy}" r="${d * 0.19}" fill="none" stroke="#F5EFE4" stroke-width="${w * 0.004}" opacity="0.45"/>` +
-    `<circle cx="${cx}" cy="${cy}" r="${d * 0.02}" fill="#151312"/>` +
-    // Sleeve: warm card stock, an arc and two bars standing in for cover
-    // art. Abstract on purpose — a real cover is someone else's copyright.
-    `<rect x="${x}" y="${y}" width="${sleeve}" height="${sleeve}" rx="${w * 0.012}" fill="#4C4238"/>` +
-    `<rect x="${x}" y="${y}" width="${sleeve}" height="${sleeve * 0.52}" rx="${w * 0.012}" fill="#5C5044"/>` +
-    `<rect x="${x}" y="${y}" width="${sleeve}" height="${sleeve}" rx="${w * 0.012}" fill="none" stroke="#6E6154" stroke-width="${w * 0.004}"/>` +
-    `<path d="M ${x + sleeve * 0.14} ${y + sleeve * 0.66} a ${sleeve * 0.32} ${sleeve * 0.32} 0 0 1 ${sleeve * 0.64} 0" fill="none" stroke="${C.gold}" stroke-width="${w * 0.018}" stroke-linecap="round"/>` +
-    `<circle cx="${x + sleeve * 0.5}" cy="${y + sleeve * 0.38}" r="${sleeve * 0.1}" fill="${C.gold}"/>` +
-    `<rect x="${x + sleeve * 0.14}" y="${y + sleeve * 0.79}" width="${sleeve * 0.52}" height="${sleeve * 0.05}" rx="${sleeve * 0.025}" fill="#EFE7DA"/>` +
-    `<rect x="${x + sleeve * 0.14}" y="${y + sleeve * 0.875}" width="${sleeve * 0.34}" height="${sleeve * 0.04}" rx="${sleeve * 0.02}" fill="#A79C8E"/>` +
-    // Shadow down the opening edge, so it reads as a sleeve with something
-    // in it rather than a flat square with a circle behind.
-    `<rect x="${x + sleeve - w * 0.016}" y="${y}" width="${w * 0.016}" height="${sleeve}" fill="#221D19" opacity="0.6"/>`
-  );
-}
-
 /**
  * Square thumbnail. Fills its tile and centre-crops, rather than being
  * letterboxed into a strip — a portrait photo squeezed into a landscape
@@ -425,11 +352,8 @@ function screenScan() {
       anchor: "middle",
     }) +
     // Recent scans strip.
-    // The recent-scan strip only shows a price where the app actually has
-    // one, which today means records and CDs. Anything else would be a
-    // number the app can't produce.
-    pill(56, SH - 400, "Hounds of Love · £32", { bg: "rgba(18,17,16,0.72)", fg: C.text }) +
-    pill(430, SH - 400, "Blue Lines · £14", { bg: "rgba(18,17,16,0.72)", fg: C.text }) +
+    pill(56, SH - 400, "Corsair RGB Pro · £45", { bg: "rgba(18,17,16,0.72)", fg: C.text }) +
+    pill(430, SH - 400, "Pyrex bowl · £12", { bg: "rgba(18,17,16,0.72)", fg: C.text }) +
     // Torch + shutter.
     `<circle cx="150" cy="${SH - 250}" r="52" fill="rgba(18,17,16,0.55)"/>` +
     text(150, SH - 236, "☀", { size: 40, fill: C.text, anchor: "middle" }) +
@@ -440,19 +364,25 @@ function screenScan() {
 }
 
 /**
- * The one scan in this set that carries a price, and every figure in it has
- * to be one the app could really return: a Discogs "sold for" median, its
- * condition spread as the range, and 40% of the median as the max buy —
- * exactly the arithmetic in server/src/lib/profit.ts. A UK original of this
- * is a genuine boot-sale find at this money.
+ * The item that carries a price across shots 2, 3 and 4.
+ *
+ * The figures are researched, not invented. A used Corsair Vengeance RGB Pro
+ * 16GB (2x8GB) DDR4-3600 kit sold on eBay UK at £45, with a Gumtree listing
+ * at £60 — hence a £45 median inside a £34–£62 spread. Max buy is 40% of the
+ * median, which is the arithmetic in server/src/lib/money.ts and nothing
+ * else.
+ *
+ * That these are ASKING prices from a live web search, not completed sales,
+ * is the whole reason the caption reads the way it does. It only holds while
+ * GEMINI_WEB_PRICES is on — see STORE.md.
  */
 const PRICED = {
-  name: "Kate Bush — Hounds of Love",
-  median: "£32.00",
-  low: "£18.00",
-  high: "£58.00",
-  maxBuy: "£12.80",
-  basis: "What copies actually sold for on Discogs · 68 for sale now",
+  name: "Corsair Vengeance RGB Pro",
+  median: "£45.00",
+  low: "£34.00",
+  high: "£62.00",
+  maxBuy: "£18.00",
+  basis: "Listed for this across UK sites just now · 14 listings",
 };
 
 /** Shared: result sheet over a dimmed frozen frame. */
@@ -460,7 +390,7 @@ function resultSheet({ highlightMaxBuy = false } = {}) {
   const top = highlightMaxBuy ? 700 : 820;
   let s =
     rect(0, 0, SW, SH, { fill: "#0B0A09" }) +
-    recordSleeve(SW / 2 - 330, 300, 660) +
+    walkman(SW / 2 - 190, 210, 380) +
     // Lighter than the app's scrim so the frozen frame still reads at
     // thumbnail size; the sheet is still clearly the focus.
     rect(0, 0, SW, SH, { fill: "rgba(18,17,16,0.55)" }) +
@@ -520,7 +450,7 @@ function screenBuyLog() {
     // Same item as shots 2 and 3: this is the next beat of one story —
     // point it, price it, decide, log it — and the headroom line below only
     // exists where the app has a real median to compare against.
-    recordSleeve(SW / 2 - 310, 330, 620) +
+    walkman(SW / 2 - 175, 240, 350) +
     rect(0, 0, SW, SH, { fill: "rgba(18,17,16,0.55)" }) +
     statusBar() +
     rect(0, top, SW, SH - top, { r: 48, fill: C.bg }) +
@@ -536,25 +466,26 @@ function screenBuyLog() {
   s +=
     rect(56, y, SW - 112, 120, { r: 24, fill: C.raised }) +
     text(96, y + 82, "£", { size: 46, fill: C.muted }) +
-    text(140, y + 82, "0.50", { size: 52, weight: 600, fill: C.text });
+    text(140, y + 82, "5.00", { size: 52, weight: 600, fill: C.text });
 
   y += 156;
   const amounts = ["50p", "£1", "£2", "£5", "£10"];
+  const chosen = 3; // £5 — matches the paid figure above and shots 5, 6 and 8
   let x = 56;
   amounts.forEach((a, i) => {
     const w = 130;
-    s += rect(x, y, w, 74, { r: 37, fill: i === 0 ? C.text : C.surface });
+    s += rect(x, y, w, 74, { r: 37, fill: i === chosen ? C.text : C.surface });
     s += text(x + w / 2, y + 50, a, {
       size: 30,
       weight: 700,
-      fill: i === 0 ? C.bg : C.text,
+      fill: i === chosen ? C.bg : C.text,
       anchor: "middle",
     });
     x += w + 16;
   });
 
   y += 130;
-  s += text(56, y, "That's about £31.50 of headroom at the median.", {
+  s += text(56, y, "That's about £40.00 of headroom at the median.", {
     size: 28,
     fill: C.profit,
   });
@@ -615,7 +546,9 @@ function screenFinds() {
     ["Technics SL-1200 platter", "Paid £5.00 · worth ~£68.00", "+£63.00", false, "platter"],
     ["Pyrex bowl, blue", "Paid £1.00 · sold £12.00", "+£9.44", true, "bowl"],
     ["Denby stoneware set", "Paid £4.00 · worth ~£35.00", "+£31.00", false, "plates"],
-    ["Game Boy, boxed", "Paid £2.00 · sold £45.00", "+£38.15", true, "gameboy"],
+    // A loose grey DMG-01 is £30-80; boxed and tidy is a different animal
+    // entirely, so £45 was well under what "boxed" is actually worth.
+    ["Game Boy, boxed", "Paid £2.00 · sold £120.00", "+£98.91", true, "gameboy"],
   ];
   rows.forEach(([name, sub, profit, sold, kind]) => {
     s +=
@@ -875,15 +808,15 @@ function heroMaxBuy() {
   let y = CARD_Y + 150;
   let s = label(x, y, "The item");
   y += 92;
-  s += text(x, y, "Kate Bush", { size: 70, weight: 700 });
+  s += text(x, y, "Corsair Vengeance", { size: 70, weight: 700 });
   y += 84;
-  s += text(x, y, "Hounds of Love", { size: 70, weight: 700 });
+  s += text(x, y, "RGB Pro 16GB", { size: 70, weight: 700 });
 
   y += 130;
   s += rect(x, y, w, 2, { fill: C.border });
 
   y += 140;
-  s += label(x, y, "Median sold price");
+  s += label(x, y, "Median asking price");
   y += 124;
   s += text(x, y, PRICED.median, { size: 128, weight: 800 });
   y += 58;
@@ -956,7 +889,7 @@ function heroBreakdown() {
   s += rect(x, y, w, 240, { r: 36, fill: C.surface });
   s += label(x + 56, y + 76, "Margin");
   s += text(x + 56, y + 176, "66.8%", { size: 92, weight: 800, fill: C.gold });
-  s += text(x + w - 56, y + 150, "Bought in Lisburn", {
+  s += text(x + w - 56, y + 150, "Bought at a boot sale", {
     size: 30,
     fill: C.muted,
     anchor: "end",
@@ -1111,7 +1044,7 @@ const SHOTS = [
     caption: "A price in|seconds",
     sub: "Not a guess, not a gut feeling",
     screen: resultSheet(),
-    float: floatChip(760, 700, "£32.00", "Sold for", C.gold),
+    float: floatChip(760, 700, "£45.00", "Median", C.gold),
   },
   {
     file: "03-maxbuy.png",

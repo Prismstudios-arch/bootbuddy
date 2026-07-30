@@ -387,7 +387,7 @@ export default function SettingsScreen() {
             tone="tertiary"
             style={{ textAlign: "center", marginVertical: space.xl }}
           >
-            Boot Sale Buddy {Constants.expoConfig?.version ?? "dev"} · Made in Northern Ireland
+            Boot Sale Buddy {Constants.expoConfig?.version ?? "dev"} · Built by one person
           </Type>
         </Pressable>
 
