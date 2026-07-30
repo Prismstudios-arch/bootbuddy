@@ -28,6 +28,27 @@ const PACKAGE_IDENTIFIERS: Record<PackageId, string> = {
 
 const ENTITLEMENT_ID = "pro";
 
+/**
+ * Which StoreKit the SDK talks to.
+ *
+ * react-native-purchases 10 defaults to StoreKit 2, and StoreKit 2 only
+ * works if an In-App Purchase Key (.p8) has been uploaded to RevenueCat —
+ * its own docs carry the warning. Without that key a purchase fails with
+ * PRODUCT_NOT_AVAILABLE_FOR_PURCHASE, which reads like an App Store
+ * problem and sends you off checking agreements and territories.
+ *
+ * StoreKit 1 needs no key, so it's the default here: the paywall works out
+ * of the box and can be tested before any of that is set up. Once the key
+ * is in RevenueCat, set EXPO_PUBLIC_STOREKIT_VERSION=STOREKIT_2 in the
+ * build profile — StoreKit 2 is the better long-term choice.
+ *
+ * String literals rather than the SDK enum on purpose: it's a string enum,
+ * and importing it eagerly would drag the native module into the Expo Go
+ * bundle, which is the one thing this whole provider exists to avoid.
+ */
+const STORE_KIT_VERSION =
+  process.env.EXPO_PUBLIC_STOREKIT_VERSION === "STOREKIT_2" ? "STOREKIT_2" : "STOREKIT_1";
+
 type PurchasesModule = any;
 
 type StoreError = {
@@ -153,7 +174,9 @@ export class RevenueCatPurchases implements PurchasesProvider {
     Purchases.configure({
       apiKey: process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY ?? "",
       appUserID: appUserId,
+      storeKitVersion: STORE_KIT_VERSION,
     });
+    console.warn(`RevenueCat configured with ${STORE_KIT_VERSION}`);
   }
 
   async getOfferings(): Promise<Offering[]> {
