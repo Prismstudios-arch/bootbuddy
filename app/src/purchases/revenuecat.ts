@@ -82,16 +82,15 @@ function flatten(error: StoreError) {
  * to throw that away.
  */
 const ERROR_COPY: Record<string, string> = {
-  PRODUCT_NOT_AVAILABLE_FOR_PURCHASE_ERROR:
+  PRODUCT_NOT_AVAILABLE_FOR_PURCHASE:
     "That plan isn't on sale in your App Store country yet.",
-  PRODUCT_ALREADY_PURCHASED_ERROR: "You already own this one — tap Restore purchases.",
-  RECEIPT_ALREADY_IN_USE_ERROR:
+  PRODUCT_ALREADY_PURCHASED: "You already own this one — tap Restore purchases.",
+  RECEIPT_ALREADY_IN_USE:
     "This purchase is already tied to another account. Tap Restore purchases.",
-  PURCHASE_NOT_ALLOWED_ERROR:
-    "This Apple ID isn't allowed to buy — check Screen Time restrictions.",
-  PURCHASE_INVALID_ERROR: "The App Store turned that payment down. Check your payment method.",
-  PAYMENT_PENDING_ERROR: "Your payment is waiting on approval. We'll unlock Pro once it clears.",
-  STORE_PROBLEM_ERROR: "The App Store is having a moment. Give it a minute and try again.",
+  PURCHASE_NOT_ALLOWED: "This Apple ID isn't allowed to buy — check Screen Time restrictions.",
+  PURCHASE_INVALID: "The App Store turned that payment down. Check your payment method.",
+  PAYMENT_PENDING: "Your payment is waiting on approval. We'll unlock Pro once it clears.",
+  STORE_PROBLEM: "The App Store is having a moment. Give it a minute and try again.",
   NETWORK_ERROR: "Couldn't reach the App Store. Check your signal?",
   OFFLINE_CONNECTION_ERROR: "You're offline. Try again when you've got signal.",
   CONFIGURATION_ERROR:
@@ -99,12 +98,24 @@ const ERROR_COPY: Record<string, string> = {
   INVALID_CREDENTIALS_ERROR:
     "Buddy Pro isn't set up properly on our end. That's ours to fix — drop us a line.",
   INELIGIBLE_ERROR: "You've had the free trial already — pick a plan to carry on.",
-  OPERATION_ALREADY_IN_PROGRESS_ERROR: "There's already a purchase going through. Hang on a sec.",
+  OPERATION_ALREADY_IN_PROGRESS: "There's already a purchase going through. Hang on a sec.",
 };
+
+/**
+ * RevenueCat's readable codes mostly have no "_ERROR" suffix — the real one
+ * that came back was PRODUCT_NOT_AVAILABLE_FOR_PURCHASE, not
+ * PRODUCT_NOT_AVAILABLE_FOR_PURCHASE_ERROR, so every guessed key above
+ * missed and the user got the raw code instead of a sentence. Look up both
+ * spellings rather than betting on which convention a given code follows.
+ */
+function copyFor(code: string): string | undefined {
+  return ERROR_COPY[code] ?? ERROR_COPY[code.replace(/_ERROR$/, "")];
+}
 
 function storeErrorMessage(error: StoreError, fallback: string): string {
   const { code, numericCode, detail } = flatten(error);
-  if (code && ERROR_COPY[code]) return ERROR_COPY[code];
+  const friendly = code ? copyFor(code) : undefined;
+  if (friendly) return friendly;
 
   // Unmapped: show whatever we've got. Ugly on screen, but it turns "it
   // doesn't work" into something that can be looked up, and a paywall that
