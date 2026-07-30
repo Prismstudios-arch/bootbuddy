@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Pressable, ScrollView, View } from "react-native";
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from "react-native";
 import Animated, { Easing, FadeIn, SlideInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/design/theme";
@@ -41,51 +41,62 @@ export function Sheet({
         />
       </Animated.View>
 
-      {/* Ease-out, not a spring: a spring overshoots and reads as "bouncy",
-          which fights the design system's 200–300ms ease-out rule and makes
-          every sheet feel wobbly rather than crisp. */}
-      <Animated.View
-        entering={SlideInDown.duration(motion.base).easing(Easing.out(Easing.cubic))}
-        style={{
-          backgroundColor: theme.color.bg,
-          borderTopLeftRadius: radius.sheet,
-          borderTopRightRadius: radius.sheet,
-          paddingTop: space.md,
-          paddingBottom: insets.bottom + space.lg,
-          maxHeight: `${maxHeightPercent}%`,
-        }}
+      {/* Every sheet in this app takes a price or a name, so the keyboard is
+          up the moment it opens. Without this the "Save" button sits behind
+          the keyboard and the sheet looks broken — you can't finish the one
+          thing you opened it to do. */}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        pointerEvents="box-none"
+        style={{ flex: 1, justifyContent: "flex-end" }}
       >
-        <View
+        {/* Ease-out, not a spring: a spring overshoots and reads as "bouncy",
+            which fights the design system's 200–300ms ease-out rule and makes
+            every sheet feel wobbly rather than crisp. */}
+        <Animated.View
+          entering={SlideInDown.duration(motion.base).easing(Easing.out(Easing.cubic))}
           style={{
-            alignSelf: "center",
-            width: 36,
-            height: 4,
-            borderRadius: radius.pill,
-            backgroundColor: theme.color.border,
-            marginBottom: space.md,
+            backgroundColor: theme.color.bg,
+            borderTopLeftRadius: radius.sheet,
+            borderTopRightRadius: radius.sheet,
+            paddingTop: space.md,
+            paddingBottom: insets.bottom + space.lg,
+            maxHeight: `${maxHeightPercent}%`,
           }}
-        />
-        <ScrollView
-          contentContainerStyle={{ paddingHorizontal: space.gutter, paddingBottom: space.md }}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
         >
-          {children}
-        </ScrollView>
-        {footer ? (
           <View
             style={{
-              paddingHorizontal: space.gutter,
-              paddingTop: space.md,
-              borderTopWidth: 1,
-              borderTopColor: theme.color.border,
-              gap: space.sm,
+              alignSelf: "center",
+              width: 36,
+              height: 4,
+              borderRadius: radius.pill,
+              backgroundColor: theme.color.border,
+              marginBottom: space.md,
             }}
+          />
+          <ScrollView
+            contentContainerStyle={{ paddingHorizontal: space.gutter, paddingBottom: space.md }}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="interactive"
+            showsVerticalScrollIndicator={false}
           >
-            {footer}
-          </View>
-        ) : null}
-      </Animated.View>
+            {children}
+          </ScrollView>
+          {footer ? (
+            <View
+              style={{
+                paddingHorizontal: space.gutter,
+                paddingTop: space.md,
+                borderTopWidth: 1,
+                borderTopColor: theme.color.border,
+                gap: space.sm,
+              }}
+            >
+              {footer}
+            </View>
+          ) : null}
+        </Animated.View>
+      </KeyboardAvoidingView>
     </View>
   );
 }

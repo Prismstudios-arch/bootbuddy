@@ -116,6 +116,11 @@ export default function FindDetailScreen() {
               tone={sold ? "profit" : "neutral"}
             />
             <Type variant="display">{find.name}</Type>
+            {timeline(find) ? (
+              <Type variant="caption" tone="tertiary">
+                {timeline(find)}
+              </Type>
+            ) : null}
           </View>
 
           <ProfitBreakdown find={find} />
@@ -198,6 +203,35 @@ export default function FindDetailScreen() {
       ) : null}
     </Screen>
   );
+}
+
+const day = (value: Date) =>
+  value.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+
+/**
+ * "Bought 3 Jun · sold 12 Jul · 39 days to sell".
+ *
+ * How long the money sat in an item is the number that separates a good flip
+ * from a lucky one — a £20 profit in a week and a £20 profit in eight months
+ * are not the same trade — and it's the one thing a list of prices can never
+ * tell you. Returns "" on a dud date rather than rendering "Invalid Date".
+ */
+function timeline(find: Find): string {
+  const bought = new Date(find.boughtAt);
+  if (Number.isNaN(bought.getTime())) return "";
+
+  const sold = find.soldAt ? new Date(find.soldAt) : null;
+  const end = sold && !Number.isNaN(sold.getTime()) ? sold : new Date();
+  const days = Math.max(0, Math.round((end.getTime() - bought.getTime()) / 86_400_000));
+  const spell = `${days} ${days === 1 ? "day" : "days"}`;
+
+  const parts = [`Bought ${day(bought)}`];
+  if (sold && !Number.isNaN(sold.getTime())) {
+    parts.push(`sold ${day(sold)}`, `${spell} to sell`);
+  } else {
+    parts.push(days === 0 ? "in stock since today" : `${spell} in stock`);
+  }
+  return parts.join(" · ");
 }
 
 /**

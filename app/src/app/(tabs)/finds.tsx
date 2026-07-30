@@ -1,8 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { FlatList, Pressable, View } from "react-native";
+import { FlatList, Pressable, TextInput, View } from "react-native";
 import { useFinds, useRevalue, type Find, type FindStatus } from "@/api/finds";
+import { AddFindSheet } from "@/components/add-find-sheet";
 import { BackupPrompt } from "@/components/backup-prompt";
 import { PortfolioHeader } from "@/components/portfolio-header";
 import { EmptyState } from "@/components/empty-state";
@@ -33,20 +34,81 @@ const FILTERS: { key: Filter; label: string }[] = [
  */
 export default function FindsScreen() {
   const router = useRouter();
+  const theme = useTheme();
   const [filter, setFilter] = useState<Filter>("in_stock");
   const tabBarHeight = useTabBarHeight();
   const finds = useFinds(filter);
   const revalue = useRevalue();
+  const [adding, setAdding] = useState(false);
+  const [query, setQuery] = useState("");
+  const needle = query.trim().toLowerCase();
+  const visible = needle
+    ? (finds.data ?? []).filter((f) => f.name.toLowerCase().includes(needle))
+    : (finds.data ?? []);
 
   return (
     <Screen>
-      <View style={{ paddingVertical: space.md }}>
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          paddingVertical: space.md,
+        }}
+      >
         <Type variant="display">My Finds</Type>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Add a find by hand"
+          onPress={() => {
+            haptic.tap();
+            setAdding(true);
+          }}
+          style={({ pressed }) => ({
+            width: 44,
+            height: 44,
+            borderRadius: radius.pill,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: pressed ? theme.color.surfacePressed : theme.color.surface,
+          })}
+        >
+          <Ionicons name="add" size={26} color={theme.color.textPrimary} />
+        </Pressable>
       </View>
 
       <OfflineBanner />
       <BackupPrompt findCount={finds.data?.length ?? 0} />
       {filter !== "sold" ? <PortfolioHeader finds={finds.data ?? []} /> : null}
+
+      {(finds.data?.length ?? 0) > 5 ? (
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: space.sm,
+            backgroundColor: theme.color.surfaceRaised,
+            borderRadius: radius.card,
+            paddingHorizontal: space.md,
+            marginBottom: space.sm,
+          }}
+        >
+          <Ionicons name="search" size={16} color={theme.color.textTertiary} />
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Search your finds"
+            accessibilityLabel="Search your finds"
+            placeholderTextColor={theme.color.textTertiary}
+            style={{
+              flex: 1,
+              paddingVertical: space.md,
+              color: theme.color.textPrimary,
+              fontSize: 16,
+            }}
+          />
+        </View>
+      ) : null}
 
       <View style={{ flexDirection: "row", gap: space.sm, paddingBottom: space.md }}>
         {FILTERS.map((item) => (
@@ -86,9 +148,18 @@ export default function FindsScreen() {
           }
           cta={{ label: "Scan your first find", onPress: () => router.navigate("/") }}
         />
+      ) : visible.length === 0 ? (
+        // Searching down to nothing must say so. A blank list under a filled
+        // search box looks like the app lost your stuff.
+        <EmptyState
+          icon="search-outline"
+          title="Nothing matches that"
+          body={`No finds with “${query.trim()}” in the name.`}
+          cta={{ label: "Clear search", onPress: () => setQuery("") }}
+        />
       ) : (
         <FlatList
-          data={finds.data}
+          data={visible}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ gap: space.sm, paddingBottom: tabBarHeight + space.xxl }}
           showsVerticalScrollIndicator={false}
@@ -110,7 +181,15 @@ export default function FindsScreen() {
         />
       )}
 
-
+      {adding ? (
+        <AddFindSheet
+          onClose={() => setAdding(false)}
+          onAdded={() => {
+            setAdding(false);
+            void finds.refetch();
+          }}
+        />
+      ) : null}
     </Screen>
   );
 }

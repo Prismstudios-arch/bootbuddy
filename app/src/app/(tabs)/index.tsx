@@ -1,6 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
+import { useIsFocused } from "expo-router";
 import { useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -53,6 +55,11 @@ export default function ScanScreen() {
   const [revisiting, setRevisiting] = useState<Scan | null>(null);
   const [paywall, setPaywall] = useState(false);
   const cameraRef = useRef<CameraView>(null);
+  // The camera stays mounted but stops capturing off-tab. Unmounting it
+  // would mean a black warm-up flash every time you come back from My Finds,
+  // which on a boot sale morning is dozens of times; leaving it running
+  // would cook the phone and flatten the battery by eleven.
+  const focused = useIsFocused();
 
   const scan = useScanMutation();
   const recent = useRecentScans();
@@ -104,6 +111,33 @@ export default function ScanScreen() {
     }
   };
 
+  /**
+   * Price up a photo you already have. Boot sales are chaotic — people snap
+   * a whole table and sort it out in the car afterwards — and it's also the
+   * only way in if the camera permission was denied.
+   */
+  const pickFromLibrary = async () => {
+    if (phase.kind === "working") return;
+    haptic.tap();
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        quality: 0.9,
+      });
+      if (result.canceled) return;
+      const uri = result.assets[0]?.uri;
+      if (!uri) throw new Error("no asset returned");
+      upload(uri);
+    } catch {
+      haptic.fail();
+      setPhase({
+        kind: "failed",
+        message: "Couldn't open your photos. Try again?",
+        uri: null,
+      });
+    }
+  };
+
   const dismiss = () => {
     setPhase({ kind: "closed" });
     scan.reset();
@@ -135,33 +169,41 @@ export default function ScanScreen() {
         ? scan.error.message
         : undefined;
 
-  if (!permission) {
-    return <CameraBooting />;
-  }
-  if (!permission.granted) {
-    return (
-      <PermissionGate
-        canAsk={permission.canAskAgain}
-        onAsk={async () => {
-          haptic.tap();
-          await requestPermission();
-        }}
-      />
-    );
-  }
+  const cameraReady = permission?.granted === true;
 
   return (
     <View style={{ flex: 1, backgroundColor: "#000" }}>
+      {/* The permission gate is a state of this screen rather than a
+          replacement for it, so a denied camera still leaves you a working
+          app: pick a photo from the library and everything downstream — the
+          result sheet, logging the buy — carries on as normal. */}
       {frozenUri ? (
         <Image source={{ uri: frozenUri }} style={{ flex: 1 }} contentFit="cover" transition={120} />
+      ) : !permission ? (
+        <CameraBooting />
+      ) : !permission.granted ? (
+        <PermissionGate
+          canAsk={permission.canAskAgain}
+          onAsk={async () => {
+            haptic.tap();
+            await requestPermission();
+          }}
+          onPickPhoto={() => void pickFromLibrary()}
+        />
       ) : (
         <>
-          <CameraView ref={cameraRef} style={{ flex: 1 }} facing="back" enableTorch={torch} />
+          <CameraView
+            ref={cameraRef}
+            style={{ flex: 1 }}
+            facing="back"
+            active={focused}
+            enableTorch={torch && focused}
+          />
           {!sheetOpen ? <FramingGuide hasScanned={(recent.data?.length ?? 0) > 0} /> : null}
         </>
       )}
 
-      {!sheetOpen ? (
+      {cameraReady && !sheetOpen ? (
         <CameraControls
           torch={torch}
           onToggleTorch={() => {
@@ -169,6 +211,7 @@ export default function ScanScreen() {
             setTorch((t) => !t);
           }}
           onCapture={capture}
+          onPickPhoto={() => void pickFromLibrary()}
           recentScans={recent.data ?? []}
           onOpenRecent={(item) => {
             haptic.tap();
@@ -234,12 +277,14 @@ function CameraControls({
   torch,
   onToggleTorch,
   onCapture,
+  onPickPhoto,
   recentScans,
   onOpenRecent,
 }: {
   torch: boolean;
   onToggleTorch: () => void;
   onCapture: () => void;
+  onPickPhoto: () => void;
   recentScans: Scan[];
   onOpenRecent: (scan: Scan) => void;
 }) {
@@ -336,7 +381,23 @@ function CameraControls({
           />
         </Pressable>
 
-        <View style={{ width: 48 }} />
+        {/* Mirrors the torch button so the shutter stays dead centre. */}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Price up a photo from your library"
+          accessibilityHint="Opens your photos so you can scan one you took earlier"
+          onPress={onPickPhoto}
+          style={({ pressed }) => ({
+            width: 48,
+            height: 48,
+            borderRadius: radius.pill,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: pressed ? "rgba(245,242,237,0.3)" : "rgba(18,17,16,0.55)",
+          })}
+        >
+          <Ionicons name="images-outline" size={22} color="#F5F2ED" />
+        </Pressable>
       </View>
     </Animated.View>
   );
@@ -437,7 +498,15 @@ function CameraBooting() {
  * Pre-permission explainer — we ask for the camera only after saying why,
  * and a denial is never a dead end: it becomes a one-tap route to Settings.
  */
-function PermissionGate({ canAsk, onAsk }: { canAsk: boolean; onAsk: () => void }) {
+function PermissionGate({
+  canAsk,
+  onAsk,
+  onPickPhoto,
+}: {
+  canAsk: boolean;
+  onAsk: () => void;
+  onPickPhoto: () => void;
+}) {
   const theme = useTheme();
 
   return (
@@ -465,10 +534,15 @@ function PermissionGate({ canAsk, onAsk }: { canAsk: boolean; onAsk: () => void 
         </Type>
         <Pill label="Photos processed, then binned" />
       </View>
-      <Button
-        label={canAsk ? "Allow camera" : "Open Settings"}
-        onPress={canAsk ? onAsk : () => void Linking.openSettings().catch(() => undefined)}
-      />
+      <View style={{ gap: space.sm }}>
+        <Button
+          label={canAsk ? "Allow camera" : "Open Settings"}
+          onPress={canAsk ? onAsk : () => void Linking.openSettings().catch(() => undefined)}
+        />
+        {/* Never a dead end: without the camera you can still price up a
+            photo you already have, and the rest of the app works as normal. */}
+        <Button label="Use a photo instead" variant="ghost" onPress={onPickPhoto} />
+      </View>
     </Screen>
   );
 }

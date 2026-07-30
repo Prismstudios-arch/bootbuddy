@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import { useTheme } from "@/design/theme";
+import { motion } from "@/design/tokens";
 import { haptic } from "@/lib/haptics";
 
 /**
@@ -14,6 +15,8 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
+        animation: "shift",
+        transitionSpec: { animation: "timing", config: { duration: motion.base } },
         tabBarActiveTintColor: theme.color.textPrimary,
         tabBarInactiveTintColor: theme.color.textTertiary,
         tabBarStyle: {

@@ -228,6 +228,19 @@ function SuccessBody({
         </View>
       ) : null}
 
+      {/* Refining swaps the whole body out from under you when it lands, so
+          say it's happening — and say when it doesn't. A correction that
+          silently does nothing reads as a broken button. */}
+      {refine.isPending ? (
+        <Type variant="caption" tone="secondary">
+          Re-checking the market…
+        </Type>
+      ) : refine.isError ? (
+        <Type variant="caption" tone="loss">
+          Couldn&rsquo;t re-check that one. Try again?
+        </Type>
+      ) : null}
+
       <View style={{ gap: space.sm }}>
         <Button
           label="I bought it"

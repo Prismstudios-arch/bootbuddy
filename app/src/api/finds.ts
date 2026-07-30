@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 
 export type FindStatus = "in_stock" | "sold";
@@ -64,6 +64,11 @@ export function useFinds(status: FindStatus | "all" = "all") {
     queryFn: () =>
       apiFetch<{ finds: Find[] }>(`/v1/finds${status === "all" ? "" : `?status=${status}`}`),
     select: (data) => data.finds,
+    // Each filter is its own query key, so without this every tap on
+    // In stock / Sold / All tore the list down to skeletons and rebuilt it.
+    // Keeping the previous rows on screen makes the filter feel like a
+    // filter rather than a page load.
+    placeholderData: keepPreviousData,
   });
 }
 
