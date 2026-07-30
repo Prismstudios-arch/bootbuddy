@@ -36,7 +36,6 @@
   "submit": {
     "production": {
       "ios": {
-        "//": "App Store Connect's own ID for the app (App Information -> Apple ID). Without it, a submit outside an interactive terminal stops dead asking for it — which is exactly where CI and scripted builds run.",
         "ascAppId": "6795941838",
         "appleTeamId": "6WD4F935Z4"
       }
