@@ -82,21 +82,55 @@ function text(x, y, content, o = {}) {
 // everywhere this illustration appears. Your own photo of your own item is
 // the safest and most authentic option by a mile.
 // ---------------------------------------------------------------------------
-let ITEM_PHOTO = null;
-try {
+/**
+ * A phone screenshot is not a photo of an item — it's a photo of an item
+ * wrapped in a status bar, a shutter button and a tab bar. Dropped into our
+ * mock camera view that becomes a screenshot inside a screenshot, which is
+ * the single most obvious "this was faked" tell an App Store listing can
+ * have.
+ *
+ * So: anything taller than 2:1 is treated as a phone capture and trimmed to
+ * the item in the middle of it. Ordinary photos (4:3, 16:9, square) are
+ * nowhere near that ratio and pass through untouched.
+ */
+const CAPTURE_RATIO = 2;
+const CAPTURE_TRIM = { left: 0.012, top: 0.17, width: 0.954, height: 0.54 };
+
+async function loadPhoto(names, describe) {
   const raw = join(here, "..", "assets", "screenshots", "raw");
-  for (const name of ["item.jpg", "item.jpeg", "item.png"]) {
+  for (const name of names) {
     const file = join(raw, name);
-    if (existsSync(file)) {
-      const mime = name.endsWith("png") ? "image/png" : "image/jpeg";
-      ITEM_PHOTO = `data:${mime};base64,${readFileSync(file).toString("base64")}`;
-      console.log(`using your photo: assets/screenshots/raw/${name}`);
-      break;
+    if (!existsSync(file)) continue;
+
+    let buffer = readFileSync(file);
+    let mime = name.endsWith("png") ? "image/png" : "image/jpeg";
+    try {
+      const meta = await sharp(buffer).metadata();
+      if (meta.width && meta.height && meta.height / meta.width >= CAPTURE_RATIO) {
+        buffer = await sharp(buffer)
+          .extract({
+            left: Math.round(meta.width * CAPTURE_TRIM.left),
+            top: Math.round(meta.height * CAPTURE_TRIM.top),
+            width: Math.round(meta.width * CAPTURE_TRIM.width),
+            height: Math.round(meta.height * CAPTURE_TRIM.height),
+          })
+          .jpeg({ quality: 92 })
+          .toBuffer();
+        mime = "image/jpeg";
+        console.log(`${describe}: assets/screenshots/raw/${name} (trimmed off the phone chrome)`);
+      } else {
+        console.log(`${describe}: assets/screenshots/raw/${name}`);
+      }
+    } catch {
+      // Unreadable metadata — embed it as-is rather than dropping the photo.
+      console.log(`${describe}: assets/screenshots/raw/${name}`);
     }
+    return `data:${mime};base64,${buffer.toString("base64")}`;
   }
-} catch {
-  // No photo supplied — the illustration below is used.
+  return null;
 }
+
+const ITEM_PHOTO = await loadPhoto(["item.jpg", "item.jpeg", "item.png"], "using your photo");
 
 /**
  * A personal cassette player, drawn to be recognisable at thumbnail size:
@@ -139,6 +173,79 @@ function walkman(x, y, w, opts = {}) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Record artwork
+//
+// Shots 2 and 3 have to be a record, and that is not a styling choice.
+// Those two screens show a live price, a price range and a max-buy figure,
+// and the ONLY category the app can produce those for is records, CDs and
+// tapes, priced from completed sales on Discogs. Everything else gets the
+// honest "no live price — here's the search" panel. Showing a priced-up RAM
+// kit would be advertising a screen the app cannot render, which is both a
+// 2.3.3 rejection risk and a lie to someone deciding whether to install.
+//
+// Drawn rather than photographed, and deliberately abstract: a recognisable
+// album cover is someone else's copyright and has no business in our
+// marketing. Drop a photo of a record you own at
+// assets/screenshots/raw/record.jpg and it's used instead.
+// ---------------------------------------------------------------------------
+const RECORD_PHOTO = await loadPhoto(
+  ["record.jpg", "record.jpeg", "record.png"],
+  "using your record photo",
+);
+
+/**
+ * A sleeve with the disc pulled half out of it, in a w-wide box.
+ *
+ * The disc has to come far enough out that its label shows: tucked fully
+ * inside the sleeve it's a dark crescent on a dark background and the whole
+ * thing reads as a grey square. Geometry is sized so the label clears the
+ * sleeve's opening edge.
+ */
+function recordSleeve(x, y, w) {
+  const sleeve = w * 0.6;
+  if (RECORD_PHOTO) {
+    return `<image href="${RECORD_PHOTO}" x="${x}" y="${y}" width="${w}" height="${w * 0.6}" preserveAspectRatio="xMidYMid slice" clip-path="inset(0 round ${w * 0.02})"/>`;
+  }
+
+  const d = sleeve * 0.98;
+  const cx = x + w - d / 2;
+  const cy = y + sleeve / 2;
+  // Values are pitched bright, because everything drawn here sits under the
+  // result sheet's 55% scrim: a sleeve that looks right on its own vanishes
+  // into the background once the sheet is over it.
+  const grooves = [0.93, 0.84, 0.75, 0.66, 0.57, 0.48]
+    .map(
+      (t) =>
+        `<circle cx="${cx}" cy="${cy}" r="${(d / 2) * t}" fill="none" stroke="#544C43" stroke-width="${w * 0.004}"/>`,
+    )
+    .join("");
+
+  return (
+    // Disc first, so the sleeve sits over its left edge.
+    `<circle cx="${cx}" cy="${cy}" r="${d / 2}" fill="#2A2521"/>` +
+    grooves +
+    // A sheen across the vinyl — the thing that makes it read as a record
+    // rather than a dark circle.
+    `<path d="M ${cx - d * 0.4} ${cy - d * 0.24} a ${d / 2} ${d / 2} 0 0 1 ${d * 0.7} ${-d * 0.1}" fill="none" stroke="#B4A99A" stroke-width="${w * 0.011}" stroke-linecap="round" opacity="0.55"/>` +
+    `<circle cx="${cx}" cy="${cy}" r="${d * 0.19}" fill="#D2653F"/>` +
+    `<circle cx="${cx}" cy="${cy}" r="${d * 0.19}" fill="none" stroke="#F5EFE4" stroke-width="${w * 0.004}" opacity="0.45"/>` +
+    `<circle cx="${cx}" cy="${cy}" r="${d * 0.02}" fill="#151312"/>` +
+    // Sleeve: warm card stock, an arc and two bars standing in for cover
+    // art. Abstract on purpose — a real cover is someone else's copyright.
+    `<rect x="${x}" y="${y}" width="${sleeve}" height="${sleeve}" rx="${w * 0.012}" fill="#4C4238"/>` +
+    `<rect x="${x}" y="${y}" width="${sleeve}" height="${sleeve * 0.52}" rx="${w * 0.012}" fill="#5C5044"/>` +
+    `<rect x="${x}" y="${y}" width="${sleeve}" height="${sleeve}" rx="${w * 0.012}" fill="none" stroke="#6E6154" stroke-width="${w * 0.004}"/>` +
+    `<path d="M ${x + sleeve * 0.14} ${y + sleeve * 0.66} a ${sleeve * 0.32} ${sleeve * 0.32} 0 0 1 ${sleeve * 0.64} 0" fill="none" stroke="${C.gold}" stroke-width="${w * 0.018}" stroke-linecap="round"/>` +
+    `<circle cx="${x + sleeve * 0.5}" cy="${y + sleeve * 0.38}" r="${sleeve * 0.1}" fill="${C.gold}"/>` +
+    `<rect x="${x + sleeve * 0.14}" y="${y + sleeve * 0.79}" width="${sleeve * 0.52}" height="${sleeve * 0.05}" rx="${sleeve * 0.025}" fill="#EFE7DA"/>` +
+    `<rect x="${x + sleeve * 0.14}" y="${y + sleeve * 0.875}" width="${sleeve * 0.34}" height="${sleeve * 0.04}" rx="${sleeve * 0.02}" fill="#A79C8E"/>` +
+    // Shadow down the opening edge, so it reads as a sleeve with something
+    // in it rather than a flat square with a circle behind.
+    `<rect x="${x + sleeve - w * 0.016}" y="${y}" width="${w * 0.016}" height="${sleeve}" fill="#221D19" opacity="0.6"/>`
+  );
+}
+
 /**
  * Square thumbnail. Fills its tile and centre-crops, rather than being
  * letterboxed into a strip — a portrait photo squeezed into a landscape
@@ -147,6 +254,84 @@ function walkman(x, y, w, opts = {}) {
 const photo = (x, y, size, r = 18) =>
   `<rect x="${x}" y="${y}" width="${size}" height="${size}" rx="${r}" fill="#2A2520"/>` +
   walkman(x, y, size, { h: size, r });
+
+/**
+ * Per-item thumbnails for the portfolio list.
+ *
+ * There is only one real photo to hand, and stamping it on all five rows
+ * made "Pyrex bowl, blue" and "Game Boy, boxed" both show a RAM kit — which
+ * reads as a bug in the app rather than a shortage of source material.
+ * These are crude on purpose: at 90px a silhouette is all that survives,
+ * and a wrong photo is worse than an obvious drawing.
+ */
+function itemTile(kind, x, y, size, r = 18) {
+  const tile = `<rect x="${x}" y="${y}" width="${size}" height="${size}" rx="${r}" fill="#2A2520"/>`;
+  const cx = x + size / 2;
+  const cy = y + size / 2;
+  const k = size / 90;
+
+  if (kind === "photo") return photo(x, y, size, r);
+
+  if (kind === "platter") {
+    // Turntable platter: dark disc, rim, spindle.
+    return (
+      tile +
+      `<circle cx="${cx}" cy="${cy}" r="${34 * k}" fill="#1A1715"/>` +
+      `<circle cx="${cx}" cy="${cy}" r="${34 * k}" fill="none" stroke="#6E6558" stroke-width="${3 * k}"/>` +
+      `<circle cx="${cx}" cy="${cy}" r="${20 * k}" fill="none" stroke="#4A443C" stroke-width="${2 * k}"/>` +
+      `<circle cx="${cx}" cy="${cy}" r="${5 * k}" fill="#9C948A"/>`
+    );
+  }
+
+  if (kind === "bowl") {
+    // Blue bowl seen slightly from above.
+    return (
+      tile +
+      `<path d="M ${cx - 32 * k} ${cy - 8 * k} a ${32 * k} ${28 * k} 0 0 0 ${64 * k} 0 z" fill="#3E6E9E"/>` +
+      `<ellipse cx="${cx}" cy="${cy - 8 * k}" rx="${32 * k}" ry="${11 * k}" fill="#5A8FC4"/>` +
+      `<ellipse cx="${cx}" cy="${cy - 8 * k}" rx="${23 * k}" ry="${7 * k}" fill="#294A6B"/>`
+    );
+  }
+
+  if (kind === "plates") {
+    // Stack of stoneware plates.
+    return (
+      tile +
+      [0, 1, 2]
+        .map(
+          (i) =>
+            `<ellipse cx="${cx}" cy="${cy + 16 * k - i * 13 * k}" rx="${33 * k}" ry="${9 * k}" fill="${["#5C5247", "#6E6357", "#857A6C"][i]}"/>`,
+        )
+        .join("")
+    );
+  }
+
+  if (kind === "vase") {
+    // Art-pottery vase: bulbous body, narrow neck, flared lip.
+    return (
+      tile +
+      `<path d="M ${cx - 8 * k} ${cy - 32 * k} l ${16 * k} 0 l ${-2 * k} ${16 * k} a ${24 * k} ${26 * k} 0 1 1 ${-12 * k} 0 z" fill="#2E6B5E"/>` +
+      `<ellipse cx="${cx}" cy="${cy + 8 * k}" rx="${15 * k}" ry="${17 * k}" fill="#3F8A78"/>` +
+      `<ellipse cx="${cx - 5 * k}" cy="${cy + 4 * k}" rx="${5 * k}" ry="${7 * k}" fill="#C9A24A"/>` +
+      `<ellipse cx="${cx}" cy="${cy - 32 * k}" rx="${11 * k}" ry="${4 * k}" fill="#4E9E8B"/>`
+    );
+  }
+
+  if (kind === "gameboy") {
+    // Handheld console: body, screen, two buttons.
+    return (
+      tile +
+      `<rect x="${cx - 24 * k}" y="${cy - 34 * k}" width="${48 * k}" height="${68 * k}" rx="${7 * k}" fill="#9A968C"/>` +
+      `<rect x="${cx - 17 * k}" y="${cy - 27 * k}" width="${34 * k}" height="${28 * k}" rx="${3 * k}" fill="#37402E"/>` +
+      `<rect x="${cx - 18 * k}" y="${cy + 10 * k}" width="${11 * k}" height="${4 * k}" rx="${2 * k}" fill="#4E4A44"/>` +
+      `<rect x="${cx - 14 * k}" y="${cy + 6 * k}" width="${4 * k}" height="${11 * k}" rx="${2 * k}" fill="#4E4A44"/>` +
+      `<circle cx="${cx + 11 * k}" cy="${cy + 10 * k}" r="${5 * k}" fill="#8C3A55"/>` +
+      `<circle cx="${cx + 21 * k}" cy="${cy + 4 * k}" r="${5 * k}" fill="#8C3A55"/>`
+    );
+  }
+
+  return photo(x, y, size, r);
+}
 
 const rect = (x, y, w, h, o = {}) =>
   `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${o.r ?? 0}" fill="${o.fill ?? C.surface}"${o.stroke ? ` stroke="${o.stroke}" stroke-width="${o.sw ?? 2}"` : ""}${o.opacity ? ` opacity="${o.opacity}"` : ""}/>`;
@@ -208,17 +393,26 @@ const statusBar = () =>
 
 /** 1. Camera with framing guide. */
 function screenScan() {
-  const g = 400;
+  const g = 470;
   const gx = (SW - g) / 2;
-  const gy = 570;
+  const gy = 500;
   const corner = 86;
   const bracket = (px, py, sx, sy) =>
     `<path d="M ${px + sx * corner} ${py} L ${px} ${py} L ${px} ${py + sy * corner}" stroke="${C.text}" stroke-width="8" fill="none" stroke-linecap="round" opacity="0.9"/>`;
   return (
     rect(0, 0, SW, SH, { fill: "#0B0A09" }) +
+    // A soft warm pool of light where the item sits. A viewfinder rendered
+    // as flat black reads as a screen that hasn't loaded; a real camera
+    // always has a scene behind the subject.
+    `<defs><radialGradient id="tableGlow" cx="50%" cy="42%" r="72%">` +
+    `<stop offset="0%" stop-color="#332A20"/>` +
+    `<stop offset="55%" stop-color="#191512"/>` +
+    `<stop offset="100%" stop-color="#0B0A09"/>` +
+    `</radialGradient></defs>` +
+    `<rect x="0" y="0" width="${SW}" height="${SH}" fill="url(#tableGlow)"/>` +
     // A trestle table with a cassette player framed on it — vague blobs
     // read as a rendering artefact, a recognisable object reads as a scan.
-    walkman(SW / 2 - 170, 600, 340) +
+    walkman(SW / 2 - 215, 520, 430) +
     statusBar() +
     bracket(gx, gy, 1, 1) +
     bracket(gx + g, gy, -1, 1) +
@@ -231,8 +425,11 @@ function screenScan() {
       anchor: "middle",
     }) +
     // Recent scans strip.
-    pill(56, SH - 400, "Corsair RGB Pro · £38", { bg: "rgba(18,17,16,0.72)", fg: C.text }) +
-    pill(430, SH - 400, "Pyrex bowl · £14", { bg: "rgba(18,17,16,0.72)", fg: C.text }) +
+    // The recent-scan strip only shows a price where the app actually has
+    // one, which today means records and CDs. Anything else would be a
+    // number the app can't produce.
+    pill(56, SH - 400, "Hounds of Love · £32", { bg: "rgba(18,17,16,0.72)", fg: C.text }) +
+    pill(430, SH - 400, "Blue Lines · £14", { bg: "rgba(18,17,16,0.72)", fg: C.text }) +
     // Torch + shutter.
     `<circle cx="150" cy="${SH - 250}" r="52" fill="rgba(18,17,16,0.55)"/>` +
     text(150, SH - 236, "☀", { size: 40, fill: C.text, anchor: "middle" }) +
@@ -242,12 +439,28 @@ function screenScan() {
   );
 }
 
+/**
+ * The one scan in this set that carries a price, and every figure in it has
+ * to be one the app could really return: a Discogs "sold for" median, its
+ * condition spread as the range, and 40% of the median as the max buy —
+ * exactly the arithmetic in server/src/lib/profit.ts. A UK original of this
+ * is a genuine boot-sale find at this money.
+ */
+const PRICED = {
+  name: "Kate Bush — Hounds of Love",
+  median: "£32.00",
+  low: "£18.00",
+  high: "£58.00",
+  maxBuy: "£12.80",
+  basis: "What copies actually sold for on Discogs · 68 for sale now",
+};
+
 /** Shared: result sheet over a dimmed frozen frame. */
 function resultSheet({ highlightMaxBuy = false } = {}) {
   const top = highlightMaxBuy ? 700 : 820;
   let s =
     rect(0, 0, SW, SH, { fill: "#0B0A09" }) +
-    walkman(SW / 2 - 175, 170, 350) +
+    recordSleeve(SW / 2 - 330, 300, 660) +
     // Lighter than the app's scrim so the frozen frame still reads at
     // thumbnail size; the sheet is still clearly the focus.
     rect(0, 0, SW, SH, { fill: "rgba(18,17,16,0.55)" }) +
@@ -256,13 +469,13 @@ function resultSheet({ highlightMaxBuy = false } = {}) {
     rect(SW / 2 - 36, top + 26, 72, 8, { r: 4, fill: C.border });
 
   let y = top + 110;
-  s += text(56, y, "Corsair Vengeance RGB Pro", { size: 42, weight: 700 });
+  s += text(56, y, PRICED.name, { size: 42, weight: 700 });
   y += 44;
   s += text(56, y, "Certain", { size: 26, fill: C.muted });
   y += 120;
-  s += text(56, y, "£38.50", { size: 118, weight: 700, fill: C.text });
+  s += text(56, y, PRICED.median, { size: 118, weight: 700, fill: C.text });
   y += 48;
-  s += text(56, y, "Asking prices on eBay UK right now · 23 listings", {
+  s += text(56, y, PRICED.basis, {
     size: 24,
     fill: C.muted,
   });
@@ -272,15 +485,15 @@ function resultSheet({ highlightMaxBuy = false } = {}) {
   s +=
     rect(56, y, SW - 112, 14, { r: 7, fill: C.raised }) +
     rect(56 + (SW - 112) * 0.46, y - 8, 8, 30, { r: 4, fill: C.profit }) +
-    text(56, y + 60, "£24.99", { size: 24, fill: C.faint }) +
-    text(SW - 56, y + 60, "£59.00", { size: 24, fill: C.faint, anchor: "end" });
+    text(56, y + 60, PRICED.low, { size: 24, fill: C.faint }) +
+    text(SW - 56, y + 60, PRICED.high, { size: 24, fill: C.faint, anchor: "end" });
 
   y += 110;
   const boxFill = highlightMaxBuy ? C.profitBg : C.surface;
   s +=
     rect(56, y, SW - 112, 210, { r: 24, fill: boxFill }) +
     label(96, y + 56, "Your max buy price") +
-    text(96, y + 140, "£15.40", { size: 76, weight: 700, fill: C.profit }) +
+    text(96, y + 140, PRICED.maxBuy, { size: 76, weight: 700, fill: C.profit }) +
     text(96, y + 182, "40% of median — room for fees, postage and profit", {
       size: 22,
       fill: C.faint,
@@ -304,14 +517,17 @@ function screenBuyLog() {
   const top = 900;
   let s =
     rect(0, 0, SW, SH, { fill: "#0B0A09" }) +
-    walkman(SW / 2 - 165, 180, 330) +
+    // Same item as shots 2 and 3: this is the next beat of one story —
+    // point it, price it, decide, log it — and the headroom line below only
+    // exists where the app has a real median to compare against.
+    recordSleeve(SW / 2 - 310, 330, 620) +
     rect(0, 0, SW, SH, { fill: "rgba(18,17,16,0.55)" }) +
     statusBar() +
     rect(0, top, SW, SH - top, { r: 48, fill: C.bg }) +
     rect(SW / 2 - 36, top + 26, 72, 8, { r: 4, fill: C.border });
 
   let y = top + 110;
-  s += text(56, y, "Corsair Vengeance RGB Pro", { size: 40, weight: 700 });
+  s += text(56, y, PRICED.name, { size: 40, weight: 700 });
   y += 44;
   s += text(56, y, "What did you pay?", { size: 26, fill: C.muted });
   y += 80;
@@ -338,7 +554,7 @@ function screenBuyLog() {
   });
 
   y += 130;
-  s += text(56, y, "That's about £33.50 of headroom at the median.", {
+  s += text(56, y, "That's about £31.50 of headroom at the median.", {
     size: 28,
     fill: C.profit,
   });
@@ -352,7 +568,34 @@ function screenFinds() {
   let s = rect(0, 0, SW, SH, { fill: C.bg }) + statusBar();
   let y = 190;
   s += text(56, y, "My Finds", { size: 72, weight: 700 });
-  y += 80;
+  s +=
+    rect(SW - 132, y - 52, 76, 76, { r: 38, fill: C.surface }) +
+    text(SW - 94, y - 1, "+", { size: 50, weight: 500, anchor: "middle" });
+
+  // Haul value card. The two in-stock rows below are the £5 platter now
+  // worth £68 and the £4 Denby set now worth £35, so: £103 held, £9 spent,
+  // £94 of upside. Every figure here has to reconcile with the list or the
+  // screenshot is quietly lying about the maths.
+  y += 50;
+  s +=
+    rect(56, y, SW - 112, 236, { r: 24, fill: C.surface }) +
+    label(96, y + 56, "Haul value") +
+    text(96, y + 140, "£103.00", { size: 76, weight: 700 }) +
+    rect(408, y + 88, 214, 54, { r: 27, fill: C.profitBg }) +
+    text(515, y + 124, "▲ £6.00 (6.2%)", {
+      size: 24,
+      weight: 700,
+      fill: C.profit,
+      anchor: "middle",
+    }) +
+    text(96, y + 190, "2 items · £9.00 spent ·", { size: 24, fill: C.muted }) +
+    text(366, y + 190, "+£94.00 if it all sells", {
+      size: 24,
+      weight: 600,
+      fill: C.profit,
+    });
+
+  y += 296;
   ["In stock", "Sold", "All"].forEach((f, i) => {
     const w = f.length * 17 + 60;
     const x = 56 + (i === 0 ? 0 : i === 1 ? 230 : 380);
@@ -368,16 +611,16 @@ function screenFinds() {
 
   y += 120;
   const rows = [
-    ["Corsair Vengeance RGB Pro", "Paid £5.00 · sold £42.00", "+£28.05", true],
-    ["Technics SL-1200 platter", "Paid £5.00 · worth ~£68.00", "+£63.00", false],
-    ["Pyrex bowl, blue", "Paid £1.00 · sold £12.00", "+£9.44", true],
-    ["Denby stoneware set", "Paid £4.00 · worth ~£35.00", "+£31.00", false],
-    ["Game Boy, boxed", "Paid £2.00 · sold £45.00", "+£38.15", true],
+    ["Corsair Vengeance RGB Pro", "Paid £5.00 · sold £42.00", "+£28.05", true, "photo"],
+    ["Technics SL-1200 platter", "Paid £5.00 · worth ~£68.00", "+£63.00", false, "platter"],
+    ["Pyrex bowl, blue", "Paid £1.00 · sold £12.00", "+£9.44", true, "bowl"],
+    ["Denby stoneware set", "Paid £4.00 · worth ~£35.00", "+£31.00", false, "plates"],
+    ["Game Boy, boxed", "Paid £2.00 · sold £45.00", "+£38.15", true, "gameboy"],
   ];
-  rows.forEach(([name, sub, profit, sold]) => {
+  rows.forEach(([name, sub, profit, sold, kind]) => {
     s +=
       rect(56, y, SW - 112, 150, { r: 24, fill: C.surface }) +
-      photo(88, y + 30, 90) +
+      itemTile(kind, 88, y + 30, 90) +
       (sold
         ? `<circle cx="${88 + 76}" cy="${y + 42}" r="18" fill="${C.profitBg}"/>` +
           text(88 + 76, y + 50, "✓", { size: 22, fill: C.profit, anchor: "middle" })
@@ -451,20 +694,23 @@ function screenProfit() {
   s += text(56, y, "38 flips · 71% average margin", { size: 28, fill: C.muted });
 
   y += 70;
+  // "Haul value" with its movement, not a bare item count — the app shows
+  // what the stock is worth and which way it moved since the last check.
   const cards = [
-    ["This month", "£318.40"],
-    ["Last month", "£204.10"],
-    ["In stock", "17"],
-    ["Spent", "£142.00"],
+    ["This month", "£318.40", null],
+    ["Last month", "£204.10", null],
+    ["Haul value", "£412.00", "▲ £18.40 since last check"],
+    ["Spent", "£142.00", null],
   ];
-  cards.forEach(([k, v], i) => {
+  cards.forEach(([k, v, sub], i) => {
     const cx = 56 + (i % 2) * ((SW - 112) / 2 + 20);
     const cy = y + Math.floor(i / 2) * 190;
     const cw = (SW - 132) / 2;
     s +=
       rect(cx, cy, cw, 168, { r: 24, fill: C.surface }) +
       label(cx + 32, cy + 56, k) +
-      text(cx + 32, cy + 120, v, { size: 44, weight: 700 });
+      text(cx + 32, cy + 120, v, { size: 44, weight: 700 }) +
+      (sub ? text(cx + 32, cy + 152, sub, { size: 21, weight: 600, fill: C.profit }) : "");
   });
 
   y += 410;
@@ -480,14 +726,18 @@ function screenProfit() {
     s += text(bx + bw / 2, y + 296, months[i], { size: 24, fill: C.faint, anchor: "middle" });
   });
 
+  // Best flip has to actually be the best one. The £28.05 Corsair flip on
+  // shot 8 is a good day; against £1,284.60 across 38 flips it is nowhere
+  // near a personal best, and a "best ever" below the average is the kind of
+  // detail that makes someone stop trusting every other number on screen.
   y += 380;
   s +=
     rect(56, y, SW - 112, 250, { r: 24, fill: C.surface }) +
     label(96, y + 56, "Best flip ever") +
-    photo(96, y + 76, 116) +
-    text(240, y + 128, "Corsair Vengeance RGB", { size: 30, weight: 600 }) +
-    text(240, y + 172, "£5.00 → £42.00", { size: 26, fill: C.muted }) +
-    text(SW - 96, y + 158, "£28.05", { size: 52, weight: 700, fill: C.gold, anchor: "end" });
+    itemTile("vase", 96, y + 76, 116, 22) +
+    text(240, y + 128, "Moorcroft vase", { size: 30, weight: 600 }) +
+    text(240, y + 172, "£3.00 → £245.00", { size: 26, fill: C.muted }) +
+    text(SW - 96, y + 158, "£205.15", { size: 52, weight: 700, fill: C.gold, anchor: "end" });
 
   return s + tabBar("Profit");
 }
@@ -625,19 +875,19 @@ function heroMaxBuy() {
   let y = CARD_Y + 150;
   let s = label(x, y, "The item");
   y += 92;
-  s += text(x, y, "Corsair Vengeance", { size: 70, weight: 700 });
+  s += text(x, y, "Kate Bush", { size: 70, weight: 700 });
   y += 84;
-  s += text(x, y, "RGB Pro 16GB", { size: 70, weight: 700 });
+  s += text(x, y, "Hounds of Love", { size: 70, weight: 700 });
 
   y += 130;
   s += rect(x, y, w, 2, { fill: C.border });
 
   y += 140;
-  s += label(x, y, "Median asking price");
+  s += label(x, y, "Median sold price");
   y += 124;
-  s += text(x, y, "£38.50", { size: 128, weight: 800 });
+  s += text(x, y, PRICED.median, { size: 128, weight: 800 });
   y += 58;
-  s += text(x, y, "Asking prices on eBay UK right now · 23 listings", {
+  s += text(x, y, PRICED.basis, {
     size: 30,
     fill: C.muted,
   });
@@ -646,13 +896,13 @@ function heroMaxBuy() {
   s +=
     rect(x, y, w, 16, { r: 8, fill: C.raised }) +
     rect(x + w * 0.46, y - 10, 10, 36, { r: 5, fill: C.profit }) +
-    text(x, y + 82, "£24.99", { size: 28, fill: C.faint }) +
-    text(x + w, y + 82, "£59.00", { size: 28, fill: C.faint, anchor: "end" });
+    text(x, y + 82, PRICED.low, { size: 28, fill: C.faint }) +
+    text(x + w, y + 82, PRICED.high, { size: 28, fill: C.faint, anchor: "end" });
 
   y += 200;
   s += rect(x, y, w, 420, { r: 36, fill: C.profitBg, stroke: C.profit, sw: 3 });
   s += label(x + 56, y + 92, "Your max buy price", C.profit);
-  s += text(x + 56, y + 260, "£15.40", { size: 186, weight: 800, fill: C.profit });
+  s += text(x + 56, y + 260, PRICED.maxBuy, { size: 186, weight: 800, fill: C.profit });
   s += text(x + 56, y + 330, "40% of the median — leaves room for eBay fees,", {
     size: 30,
     fill: C.muted,
@@ -861,7 +1111,7 @@ const SHOTS = [
     caption: "A price in|seconds",
     sub: "Not a guess, not a gut feeling",
     screen: resultSheet(),
-    float: floatChip(760, 700, "£38.50", "Median", C.gold),
+    float: floatChip(760, 700, "£32.00", "Sold for", C.gold),
   },
   {
     file: "03-maxbuy.png",

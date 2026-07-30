@@ -52,8 +52,11 @@ WHAT YOU GET
 • One tap to eBay sold prices for anything else, search already filled in
 • A suggested maximum buy price, so you know when to walk away
 • Log buys in two taps — built for cold hands and bad signal
+• Or add anything by hand: job lots, boxes of bits, stuff you bought years ago
+• Price up a photo you already took, without being stood in front of it
 • Automatic profit maths after selling fees and postage
 • Your whole haul in one place: in stock, sold, and what you're up
+• Search your finds, and see how long each one's been sitting
 • Share a card of your best flips
 
 HONEST ABOUT PRICES
@@ -117,6 +120,12 @@ as collected. If a reviewer queries it, the honest answer is: "Photos are
 sent to an AI vision provider for identification and immediately
 discarded. No photo is stored on our servers or associated with a user."
 
+This holds whether the photo came from the camera or the photo library —
+the library is read only when the user picks a specific photo, and the
+picked photo goes down the identical path. `NSPhotoLibraryUsageDescription`
+is declared for that; the app never enumerates the library and never asks
+for write access.
+
 ## Review notes (paste into App Review Information)
 
 **Uncheck "Sign-in required"** — the app needs no login at all.
@@ -137,7 +146,9 @@ That unlocks all Pro features permanently on that install.
 
 TESTING THE SCANNER: point the camera at any everyday object (a games
 console, a kettle, a book) and press the shutter. Identification takes 2-4
-seconds.
+seconds. If the simulator has no camera, tap the photo icon to the right of
+the shutter and pick any photo of an object from the library instead — it
+goes through exactly the same flow.
 
 ABOUT THE PRICES: for records and CDs the app shows prices derived from
 completed sales on Discogs, and labels them as such. For every other
@@ -164,23 +175,39 @@ match, so upload from the matching folder:
 Only the first 3 are shown on the install sheet, so keep 01, 02 and 03 in
 that order — they carry the pitch on their own.
 
-### Original shot list
+### What's in the nine
 
-Shoot on a device with a decent haul logged, in this order — the sequence
-tells the story rather than just showing screens:
+| # | Screen | Caption |
+|---|---|---|
+| 01 | Camera, item framed | Know what it's worth |
+| 02 | Result sheet with a price | A price in seconds |
+| 03 | Max buy price, enlarged | Know when to walk away |
+| 04 | Buy log, 50p selected | Logged in two taps |
+| 05 | My Finds with haul value | Your whole haul |
+| 06 | Profit breakdown, enlarged | Every penny accounted for |
+| 07 | Profit dashboard | Watch it stack up |
+| 08 | Share card | Share the wins |
+| 09 | Paywall | Less than one good flip |
 
-1. **Scan in action** — camera on a recognisable item, framing guide visible.
-   Caption: *"Point it at anything"*
-2. **Result sheet with a good find** — clear price range and max buy price.
-   Caption: *"Know what it's worth in seconds"*
-3. **Profit dashboard** — with real numbers, not zeroes.
-   Caption: *"Watch the profit stack up"*
-4. **My Finds** — a mix of in-stock and sold rows with green chips.
-   Caption: *"Your whole haul in one place"*
-5. **Share card** — the 50p → £42 card.
-   Caption: *"Share the wins"*
-6. **Paywall** — the value list.
-   Caption: *"Less than one good flip a year"*
+**Shots 02, 03 and 04 must stay a record, and that is not a styling
+choice.** They're the only three that show a live price, a price range and a
+max-buy figure, and records, CDs and tapes are the only category the app can
+produce those for. Everything else gets the honest "no live price — here's
+the search" panel, so a priced-up anything-else would be advertising a
+screen the app cannot render: a 2.3.3 rejection risk, and a lie to whoever
+installs on the strength of it. If eBay (or another source) ever comes
+through, that constraint lifts and any category can carry those shots.
+
+Two spots take your own photography, both optional:
+
+| File | Used for | If missing |
+|---|---|---|
+| `raw/item.jpg` | The scanned item on 01, and its thumbnail on 05–08 | A drawn cassette player |
+| `raw/record.jpg` | The record on 02–04 | A drawn sleeve and disc |
+
+Drop a **phone screenshot** in either slot and the script trims the status
+bar, shutter and tab bar off it automatically — anything taller than 2:1 is
+assumed to be a capture. An ordinary photo passes through untouched.
 
 Do not use the empty states in screenshots. An empty app looks like a
 broken app.

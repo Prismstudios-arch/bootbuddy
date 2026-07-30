@@ -1,11 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useRouter, useScrollToTop } from "expo-router";
+import { useRef, useState } from "react";
 import { FlatList, Pressable, TextInput, View } from "react-native";
 import { useFinds, useRevalue, type Find, type FindStatus } from "@/api/finds";
 import { AddFindSheet } from "@/components/add-find-sheet";
 import { BackupPrompt } from "@/components/backup-prompt";
-import { PortfolioHeader } from "@/components/portfolio-header";
+import { PortfolioHeader, SoldSummary } from "@/components/portfolio-header";
 import { EmptyState } from "@/components/empty-state";
 import { OfflineBanner } from "@/components/offline-banner";
 import { FindThumbnail } from "@/components/find-thumbnail";
@@ -41,6 +41,10 @@ export default function FindsScreen() {
   const revalue = useRevalue();
   const [adding, setAdding] = useState(false);
   const [query, setQuery] = useState("");
+  // Tapping the active tab scrolls back to the top — an iOS convention old
+  // enough that its absence reads as a bug once a haul gets long.
+  const listRef = useRef<FlatList<Find>>(null);
+  useScrollToTop(listRef);
   const needle = query.trim().toLowerCase();
   const visible = needle
     ? (finds.data ?? []).filter((f) => f.name.toLowerCase().includes(needle))
@@ -79,7 +83,11 @@ export default function FindsScreen() {
 
       <OfflineBanner />
       <BackupPrompt findCount={finds.data?.length ?? 0} />
-      {filter !== "sold" ? <PortfolioHeader finds={finds.data ?? []} /> : null}
+      {filter === "sold" ? (
+        <SoldSummary finds={finds.data ?? []} />
+      ) : (
+        <PortfolioHeader finds={finds.data ?? []} />
+      )}
 
       {(finds.data?.length ?? 0) > 5 ? (
         <View
@@ -159,6 +167,7 @@ export default function FindsScreen() {
         />
       ) : (
         <FlatList
+          ref={listRef}
           data={visible}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ gap: space.sm, paddingBottom: tabBarHeight + space.xxl }}

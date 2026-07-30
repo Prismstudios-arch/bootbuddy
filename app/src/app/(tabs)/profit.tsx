@@ -1,3 +1,5 @@
+import { useScrollToTop } from "expo-router";
+import { useRef } from "react";
 import { RefreshControl, ScrollView, View } from "react-native";
 import { useStats } from "@/api/finds";
 import { CountUpPrice } from "@/components/count-up";
@@ -24,6 +26,8 @@ export default function ProfitScreen() {
   // Without this the last card sits under the tab bar and its button is
   // literally cut in half.
   const tabBarHeight = useTabBarHeight();
+  const scrollRef = useRef<ScrollView>(null);
+  useScrollToTop(scrollRef);
 
   const best = stats.data?.bestFlip ?? null;
   if (stats.isPending) {
@@ -62,6 +66,7 @@ export default function ProfitScreen() {
   return (
     <Screen>
       <ScrollView
+        ref={scrollRef}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: tabBarHeight + space.xxl }}
         refreshControl={

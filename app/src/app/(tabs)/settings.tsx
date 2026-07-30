@@ -1,8 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
 import Constants from "expo-constants";
-import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useRouter, useScrollToTop } from "expo-router";
+import { useEffect, useRef, useState } from "react";
 import { Alert, Pressable, ScrollView, View } from "react-native";
 import { findKeys } from "@/api/finds";
 import { scanKeys, useSession } from "@/api/scans";
@@ -58,6 +58,8 @@ export default function SettingsScreen() {
   const [exporting, setExporting] = useState(false);
   const [appleAvailable, setAppleAvailable] = useState(false);
   const [signingIn, setSigningIn] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
+  useScrollToTop(scrollRef);
 
   useEffect(() => {
     void isAppleSignInAvailable().then(setAppleAvailable);
@@ -243,6 +245,7 @@ export default function SettingsScreen() {
   return (
     <Screen>
       <ScrollView
+        ref={scrollRef}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: tabBarHeight + space.lg }}
       >

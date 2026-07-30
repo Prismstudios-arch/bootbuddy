@@ -99,3 +99,41 @@ export function PortfolioHeader({ finds }: { finds: Find[] }) {
     </View>
   );
 }
+
+/**
+ * The same treatment for the Sold filter, so tapping it doesn't drop you
+ * onto a bare list. Each find's profit is already worked out server-side —
+ * this only adds them up, so it can never disagree with the Profit tab.
+ */
+export function SoldSummary({ finds }: { finds: Find[] }) {
+  const theme = useTheme();
+  const sold = finds.filter((f) => f.status === "sold");
+  if (sold.length === 0) return null;
+
+  const profit = sold.reduce((sum, f) => sum + (f.realisedProfitPence ?? 0), 0);
+  const takings = sold.reduce((sum, f) => sum + (f.soldPricePence ?? 0), 0);
+  const up = profit >= 0;
+
+  return (
+    <View
+      style={{
+        backgroundColor: theme.color.surface,
+        borderRadius: radius.card,
+        padding: space.lg,
+        gap: space.xs,
+        marginBottom: space.md,
+      }}
+    >
+      <Type variant="label" tone="secondary">
+        Profit banked
+      </Type>
+      <Type variant="display" tabular style={{ color: up ? theme.color.profit : theme.color.loss }}>
+        {up ? "" : "−"}
+        {formatPence(Math.abs(profit))}
+      </Type>
+      <Type variant="caption" tone="secondary">
+        {sold.length} {sold.length === 1 ? "flip" : "flips"} · {formatPence(takings)} taken
+      </Type>
+    </View>
+  );
+}
