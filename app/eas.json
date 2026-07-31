@@ -12,7 +12,8 @@
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://boot-sale-buddy-api.fly.dev",
-        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "appl_DLPyODCPlhEJHMswFHZLsPQbYjl"
+        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "appl_DLPyODCPlhEJHMswFHZLsPQbYjl",
+        "EXPO_PUBLIC_STOREKIT_VERSION": "STOREKIT_2"
       }
     },
     "preview": {
@@ -22,14 +23,16 @@
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://boot-sale-buddy-api.fly.dev",
-        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "appl_DLPyODCPlhEJHMswFHZLsPQbYjl"
+        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "appl_DLPyODCPlhEJHMswFHZLsPQbYjl",
+        "EXPO_PUBLIC_STOREKIT_VERSION": "STOREKIT_2"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
         "EXPO_PUBLIC_API_URL": "https://boot-sale-buddy-api.fly.dev",
-        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "appl_DLPyODCPlhEJHMswFHZLsPQbYjl"
+        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "appl_DLPyODCPlhEJHMswFHZLsPQbYjl",
+        "EXPO_PUBLIC_STOREKIT_VERSION": "STOREKIT_2"
       }
     }
   },
