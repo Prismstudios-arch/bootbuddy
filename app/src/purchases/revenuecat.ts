@@ -96,8 +96,8 @@ function flatten(error: StoreError) {
  * Why the purchase failed, in words, plus the code when we haven't got words
  * for it.
  *
- * "Couldn't complete that purchase." was true and completely useless: for a
- * one-man app it turns every failure into an unanswerable support email, and
+ * "Couldn't complete that purchase." was true and completely useless: it
+ * turns every failure into an unanswerable support email, and
  * it hid the difference between "the App Store is down" and "these products
  * were never set up". RevenueCat already tells us which; there is no reason
  * to throw that away.

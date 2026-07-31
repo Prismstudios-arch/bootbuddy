@@ -24,7 +24,7 @@ const FEATURES = [
   { icon: "infinite", text: "Unlimited scans — no counting" },
   { icon: "download-outline", text: "CSV export for your tax return" },
   { icon: "cloud-upload-outline", text: "Your whole haul, backed up" },
-  { icon: "heart-outline", text: "Keeps a one-man app running" },
+  { icon: "heart-outline", text: "Keeps the app running and improving" },
 ] as const;
 
 /**

@@ -82,8 +82,7 @@ Pro gives you unlimited scans, CSV export for your tax return and your
 whole haul backed up, from £1.99/month or £12.99/year — less than one good
 flip.
 
-Built by one person, for anyone who's ever paid 50p for something worth
-£40.
+For anyone who's ever paid 50p for something worth £40.
 ```
 
 ## Promotional text (170 chars, changeable without review)
