@@ -21,6 +21,23 @@ const moneyPence = z.number().int().min(0).max(100_000_00);
  */
 const MAX_REVALUE = 25;
 
+/**
+ * Two brakes on a revalue pass, both added when grounded web pricing landed.
+ *
+ * Before it, a lookup was a fast Discogs call and only records had one, so 25
+ * of them in a row cost nothing much. Now every item in a portfolio can be
+ * priced, and each one is a live web search taking the best part of ten
+ * seconds. Twenty-five of those is four minutes of one HTTP request, which
+ * outlives the proxy, the client and the user's patience — and burns
+ * twenty-five searches every time someone idly pulls to refresh.
+ *
+ * So: stop after twenty seconds and report what got done, and don't re-price
+ * anything looked at in the last twelve hours. Nothing at a boot sale moves
+ * enough between breakfast and lunch to be worth the call.
+ */
+const REVALUE_BUDGET_MS = 20_000;
+const REVALUE_MIN_AGE_MS = 12 * 60 * 60 * 1000;
+
 const createBody = z.object({
   name: z.string().trim().min(1).max(120),
   boughtPricePence: moneyPence,
@@ -154,6 +171,7 @@ export const findsRoutes = new Hono<AuthEnv>()
         id: schema.finds.id,
         name: schema.finds.name,
         estimatedValuePence: schema.finds.estimatedValuePence,
+        valuedAt: schema.finds.valuedAt,
         query: schema.scans.searchQuery,
         category: schema.scans.category,
       })
@@ -165,8 +183,24 @@ export const findsRoutes = new Hono<AuthEnv>()
     let updated = 0;
     let skipped = 0;
     const now = new Date();
+    const deadline = Date.now() + REVALUE_BUDGET_MS;
 
     for (const row of rows) {
+      // Stop rather than let a pull-to-refresh run past the point where
+      // anyone is still holding the phone. Whatever got done is reported.
+      if (Date.now() > deadline) {
+        skipped += 1;
+        continue;
+      }
+
+      // Nothing moves enough in a few hours to be worth a fresh lookup, and
+      // each one is now a live web search. Re-checking a portfolio someone
+      // refreshed at breakfast is pure spend.
+      if (row.valuedAt && now.getTime() - row.valuedAt.getTime() < REVALUE_MIN_AGE_MS) {
+        skipped += 1;
+        continue;
+      }
+
       // Fall back to the item name for finds logged by hand, which have no
       // scan behind them.
       const query = row.query ?? row.name;

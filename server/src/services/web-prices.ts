@@ -75,6 +75,8 @@ const LINE =
 const MIN_PENCE = 50;
 const MAX_PENCE = 5_000_000;
 const MIN_LISTINGS = 3;
+/** Generous — a real search runs several queries — but not unbounded. */
+const SEARCH_TIMEOUT_MS = 25_000;
 
 type GroundedResponse = {
   candidates?: Array<{
@@ -105,11 +107,19 @@ export async function searchWebPrices(query: string): Promise<PriceResult | null
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${env.GEMINI_MODEL}:generateContent`;
 
+  // A grounded search runs a handful of live queries and can take the best
+  // part of ten seconds legitimately. Without a ceiling, one that never
+  // answers holds the whole scan open until something further up the stack
+  // gives up — and the user just watches a skeleton.
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), SEARCH_TIMEOUT_MS);
+
   let res: Response;
   try {
     res = await fetch(url, {
       method: "POST",
       headers: { "content-type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY },
+      signal: controller.signal,
       body: JSON.stringify({
         contents: [{ parts: [{ text: PROMPT.replace("{QUERY}", query) }] }],
         tools: [{ google_search: {} }],
@@ -117,8 +127,11 @@ export async function searchWebPrices(query: string): Promise<PriceResult | null
       }),
     });
   } catch (err) {
-    logger.warn({ err, query }, "web price search unreachable");
+    const timedOut = (err as Error)?.name === "AbortError";
+    logger.warn({ query, timedOut }, "web price search unreachable");
     return null;
+  } finally {
+    clearTimeout(timeout);
   }
 
   if (!res.ok) {

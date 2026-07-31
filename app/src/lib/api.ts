@@ -24,6 +24,29 @@ export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "https://boot-sale-bud
 const ACCESS_KEY = "bsb.accessToken";
 const REFRESH_KEY = "bsb.refreshToken";
 
+/**
+ * Nothing waits forever.
+ *
+ * A scan is the slow one: identifying the item, then a live web search for
+ * what it goes for, which can legitimately run half a minute. But without a
+ * ceiling a request that never answers leaves the result sheet shimmering
+ * indefinitely, and a skeleton that never resolves is indistinguishable from
+ * a broken app — the exact failure this codebase keeps trying to avoid.
+ * Sixty seconds is well clear of the honest worst case and well inside
+ * anyone's patience.
+ */
+const REQUEST_TIMEOUT_MS = 60_000;
+
+async function fetchWithTimeout(url: string, init: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 /** SecureStore (Keychain) where available; AsyncStorage on web. */
 const store = {
   async get(key: string): Promise<string | null> {
@@ -127,7 +150,7 @@ export async function apiFetch<T>(
 
   let res: Response;
   try {
-    res = await fetch(`${API_URL}${path}`, {
+    res = await fetchWithTimeout(`${API_URL}${path}`, {
       ...requestInit,
       headers: {
         ...(requestInit.body ? { "content-type": "application/json" } : {}),
@@ -135,8 +158,10 @@ export async function apiFetch<T>(
         authorization: `Bearer ${token}`,
       },
     });
-  } catch {
-    throw new ApiError(0, "offline", "Couldn't reach the shops. Check your signal?");
+  } catch (error) {
+    throw (error as Error)?.name === "AbortError"
+      ? new ApiError(0, "timeout", "That took too long. Give it another go?")
+      : new ApiError(0, "offline", "Couldn't reach the shops. Check your signal?");
   }
 
   if (res.status === 401 && retryOnAuthFailure) {
@@ -169,9 +194,13 @@ export async function apiFetchText(path: string): Promise<string> {
   const token = await ensureAccessToken();
   let res: Response;
   try {
-    res = await fetch(`${API_URL}${path}`, { headers: { authorization: `Bearer ${token}` } });
-  } catch {
-    throw new ApiError(0, "offline", "Couldn't reach the shops. Check your signal?");
+    res = await fetchWithTimeout(`${API_URL}${path}`, {
+      headers: { authorization: `Bearer ${token}` },
+    });
+  } catch (error) {
+    throw (error as Error)?.name === "AbortError"
+      ? new ApiError(0, "timeout", "That took too long. Give it another go?")
+      : new ApiError(0, "offline", "Couldn't reach the shops. Check your signal?");
   }
   if (!res.ok) {
     const body: unknown = await res.json().catch(() => null);

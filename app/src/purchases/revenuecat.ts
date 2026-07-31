@@ -159,15 +159,16 @@ export class RevenueCatPurchases implements PurchasesProvider {
 
   async configure(appUserId: string): Promise<void> {
     const Purchases = await this.module();
-    // Verbose logging while the store side is still being sorted out. It
-    // prints the StoreKit product fetch, the storefront, and the real reason
-    // a purchase was refused — none of which reaches the app as anything
-    // more than an error code, and all of which is the difference between
-    // fixing this and guessing at it.
-    try {
-      Purchases.setLogLevel("VERBOSE");
-    } catch {
-      // Older SDKs take an enum rather than a string; not worth failing over.
+    // Verbose only in debug. It prints the product fetch, the storefront and
+    // the real reason a purchase was refused, which is exactly what was
+    // needed to sort this out — but it is a lot of detail about someone's
+    // store account to be dumping into a shipped app's console.
+    if (__DEV__) {
+      try {
+        Purchases.setLogLevel("VERBOSE");
+      } catch {
+        // Older SDKs take an enum rather than a string; not worth failing over.
+      }
     }
     // appUserId is our own user UUID, so the webhook can map the purchase
     // straight back to the account without a second lookup.
@@ -176,7 +177,7 @@ export class RevenueCatPurchases implements PurchasesProvider {
       appUserID: appUserId,
       storeKitVersion: STORE_KIT_VERSION,
     });
-    console.warn(`RevenueCat configured with ${STORE_KIT_VERSION}`);
+    if (__DEV__) console.warn(`RevenueCat configured with ${STORE_KIT_VERSION}`);
   }
 
   async getOfferings(): Promise<Offering[]> {

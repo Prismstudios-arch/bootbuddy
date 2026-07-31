@@ -1,9 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, TextInput, View } from "react-native";
+import Animated, { FadeIn } from "react-native-reanimated";
 import { useRefineMutation, type AskingPrices, type Quota, type Scan } from "@/api/scans";
 import { useTheme } from "@/design/theme";
-import { radius, space } from "@/design/tokens";
+import { motion, radius, space } from "@/design/tokens";
 import { haptic } from "@/lib/haptics";
 import { formatPence } from "@/lib/money";
 import { Button } from "./button";
@@ -43,9 +44,7 @@ export function ResultSheet({
     <Sheet onClose={onClose}>
       {state === "loading" ? (
         <View style={{ gap: space.md, paddingVertical: space.sm }}>
-          <Type variant="label" tone="secondary">
-            Checking the market…
-          </Type>
+          <ScanProgress />
           <ResultSkeleton />
         </View>
       ) : state === "error" ? (
@@ -54,6 +53,39 @@ export function ResultSheet({
         <SuccessBody scan={scan} quota={quota} onBought={onBought} onClose={onClose} />
       ) : null}
     </Sheet>
+  );
+}
+
+/**
+ * What's actually happening, while it happens.
+ *
+ * A scan used to be a couple of seconds. Now it identifies the item and then
+ * runs a live web search for what it goes for, which is closer to ten — and
+ * ten seconds under one unchanging line reads as a stall. These are the real
+ * stages in order, so the wait feels like progress rather than a hang, and
+ * nobody re-taps the shutter thinking it missed.
+ */
+const STAGES = [
+  { at: 0, text: "Working out what it is…" },
+  { at: 2500, text: "Got it. Checking what they sell for…" },
+  { at: 7000, text: "Comparing a few listings…" },
+  { at: 14000, text: "Nearly there — this one's being awkward…" },
+] as const;
+
+function ScanProgress() {
+  const [stage, setStage] = useState(0);
+
+  useEffect(() => {
+    const timers = STAGES.map((s, i) => setTimeout(() => setStage(i), s.at));
+    return () => timers.forEach(clearTimeout);
+  }, []);
+
+  return (
+    <Animated.View key={stage} entering={FadeIn.duration(motion.base)}>
+      <Type variant="label" tone="secondary">
+        {STAGES[stage]?.text ?? STAGES[0].text}
+      </Type>
+    </Animated.View>
   );
 }
 
