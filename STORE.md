@@ -83,7 +83,29 @@ whole haul backed up, from £1.99/month or £12.99/year — less than one good
 flip.
 
 For anyone who's ever paid 50p for something worth £40.
+
+SUBSCRIPTION DETAILS
+Buddy Pro Monthly — £1.99 per month.
+Buddy Pro Yearly — £12.99 per year, with a 7-day free trial.
+Buddy Pro Lifetime — £29.99, paid once.
+
+Payment is charged to your Apple ID account at confirmation of purchase.
+Subscriptions renew automatically unless auto-renew is turned off at least
+24 hours before the end of the current period. Your account is charged for
+renewal within 24 hours of the end of the current period. You can manage or
+cancel a subscription in your Apple ID account settings after purchase. Any
+unused part of a free trial is forfeited when a subscription is bought.
+
+Terms of Use: https://boot-sale-buddy-api.fly.dev/terms
+Privacy Policy: https://boot-sale-buddy-api.fly.dev/privacy
 ```
+
+> **The Terms of Use link is not optional and not decorative.** Version 1.0
+> was rejected for exactly one thing: an app selling auto-renewable
+> subscriptions must carry a functional EULA link in its *metadata*, not
+> only in the app. Having one in the paywall footer is not enough. If this
+> block ever gets trimmed for length, the link and the renewal terms are the
+> last things to go.
 
 ## Promotional text (170 chars, changeable without review)
 
@@ -229,6 +251,11 @@ broken app.
 
 - [ ] Privacy Policy URL: `https://boot-sale-buddy-api.fly.dev/privacy`
 - [ ] Terms of Use URL: `https://boot-sale-buddy-api.fly.dev/terms`
+- [ ] **Terms of Use link present in the App Description itself**, plus the
+      renewal terms. This is what 1.0 was rejected for — a link in the
+      paywall does not satisfy it, because App Review checks the metadata
+- [ ] Both URLs actually load (curl them; a 404 fails review the same way a
+      missing link does)
 - [ ] Support URL and contact email working
 - [ ] In-app purchases created in App Store Connect and **submitted with the
       build** (a paywall referencing products that don't exist is an
