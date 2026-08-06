@@ -90,43 +90,6 @@ export default function SettingsScreen() {
   };
 
   /**
-   * Promo codes unlock Pro without a purchase — how App Review, press and
-   * competition winners get in, and how Pro gets tested on a real device
-   * against the live API.
-   */
-  const redeemCode = () => {
-    Alert.prompt?.(
-      "Redeem a code",
-      "Enter your Boot Sale Buddy code.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Redeem",
-          onPress: async (code?: string) => {
-            if (!code?.trim()) return;
-            try {
-              await apiFetch("/v1/redeem", {
-                method: "POST",
-                body: JSON.stringify({ code: code.trim() }),
-              });
-              refresh();
-              haptic.greatFind();
-              Alert.alert("You're in", "Buddy Pro unlocked. Scan away.");
-            } catch (error) {
-              haptic.fail();
-              Alert.alert(
-                "Couldn't redeem that",
-                error instanceof ApiError ? error.message : "Try again?",
-              );
-            }
-          },
-        },
-      ],
-      "plain-text",
-    );
-  };
-
-  /**
    * Dev menu action. Reports failures instead of throwing into the void —
    * the previous version let the ApiError escape as an unhandled rejection
    * and looked like nothing had happened at all.
@@ -145,7 +108,7 @@ export default function SettingsScreen() {
       Alert.alert(
         "Dev route unavailable",
         error instanceof ApiError && error.status === 404
-          ? `The dev entitlement route isn't mounted on ${API_URL} (it never is in production). Point EXPO_PUBLIC_API_URL at a local server, or use "Redeem a code".`
+          ? `The dev entitlement route isn't mounted on ${API_URL} (it never is in production). Point EXPO_PUBLIC_API_URL at a local server, or buy Pro in the StoreKit sandbox — TestFlight purchases aren't charged.`
           : "Couldn't reach the dev route.",
       );
     }
@@ -278,12 +241,6 @@ export default function SettingsScreen() {
           <Divider />
           {/* App Review requires Restore Purchases to be reachable. */}
           <Row icon="refresh-outline" label="Restore purchases" onPress={() => void restore()} />
-          {!isPro ? (
-            <>
-              <Divider />
-              <Row icon="ticket-outline" label="Redeem a code" onPress={redeemCode} />
-            </>
-          ) : null}
         </Card>
 
         <SectionTitle title="Preferences" />
@@ -417,7 +374,7 @@ export default function SettingsScreen() {
               tone="tertiary"
               style={{ marginTop: space.sm, marginHorizontal: space.xs }}
             >
-              Needs a local API ({API_URL}). Against production, use Redeem a code instead.
+              Needs a local API ({API_URL}). Against production, buy Pro in the sandbox instead.
             </Type>
           </View>
         ) : null}

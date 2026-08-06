@@ -535,8 +535,13 @@ function PermissionGate({
         <Pill label="Photos processed, then binned" />
       </View>
       <View style={{ gap: space.sm }}>
+        {/* "Continue", never "Allow". A custom screen that asks you to press
+            Allow before iOS has asked anything is Apple steering the answer
+            on their behalf, and 5.1.1(iv) is explicit about it — this exact
+            button cost version 1.0 a rejection. The screen explains why we
+            want the camera; the system prompt asks the question. */}
         <Button
-          label={canAsk ? "Allow camera" : "Open Settings"}
+          label={canAsk ? "Continue" : "Open Settings"}
           onPress={canAsk ? onAsk : () => void Linking.openSettings().catch(() => undefined)}
         />
         {/* Never a dead end: without the camera you can still price up a

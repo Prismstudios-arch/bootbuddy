@@ -170,10 +170,10 @@ first launch — just open it and scan. (Sign in with Apple is offered in
 Settings purely so people can back up their data to a new phone; it is
 never required.)
 
-TO TEST BUDDY PRO WITHOUT PAYING:
-Settings -> Redeem a code -> enter: <PROMO CODE from the PROMO_CODES Fly
-secret>
-That unlocks all Pro features permanently on that install.
+TO TEST BUDDY PRO:
+Settings -> Free plan -> pick any plan. In the review sandbox the purchase
+completes without a charge and unlocks everything immediately. Restore
+purchases is on the same screen.
 
 TESTING THE SCANNER: point the camera at any everyday object (a games
 console, a kettle, a book) and press the shutter. Identification takes 2-4
@@ -264,6 +264,14 @@ broken app.
 - [ ] Account deletion works and actually deletes (5.1.1(v))
 - [ ] Subscription terms visible beside the buy button (they are, in the
       paywall footer)
-- [ ] Promo code in the review notes actually redeems
+- [ ] **No in-app code redemption anywhere.** 1.0 was rejected under 3.1.1
+      for a "Redeem a code" row in Settings that unlocked Pro without a
+      purchase. Apple's sanctioned equivalents are Offer Codes and App Store
+      promo codes, both redeemed in the App Store, never in the app
+- [ ] **Permission screens say "Continue", never "Allow".** Also 1.0, under
+      5.1.1(iv): a custom screen telling someone to press Allow is steering
+      the answer before iOS has asked the question
+- [ ] **Screenshots carry no drawn status bar.** Also 1.0, under 2.3.10 —
+      a fake one without cellular/wifi/battery reads as another platform's
 - [ ] Tested on the smallest supported device — nothing clipped
 - [ ] Tested with Dynamic Type at maximum
